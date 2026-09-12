@@ -134,6 +134,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         abort_unless($pago->nombre_archivo, 404);
         return Storage::disk('public')->download($pago->nombre_archivo, $pago->nombre_original);
     })->name('sp.payments.download');
+
+    Route::get('pagos-tesoreria/{pago}/descargar', function (\App\Models\PagoTesoreria $pago) {
+        abort_unless(auth()->user()->hasAnyRole(['Tesorería', 'Logística', 'Sistemas']), 404);
+        abort_unless($pago->solicitud->tramite->obra_id === auth()->user()->obra_activa_id, 404);
+        abort_unless($pago->nombre_archivo, 404);
+        return Storage::disk('public')->download($pago->nombre_archivo, $pago->nombre_original);
+    })->name('tesoreria.pagos.download');
 });
 
 require __DIR__.'/settings.php';

@@ -84,13 +84,25 @@
                                         <flux:input label="Banco / entidad" wire:model="banco" />
                                         <flux:input label="N° operación" wire:model="operacion" />
                                         <div class="sm:col-span-2">
-                                            <flux:label>Comprobante</flux:label>
-                                            <input type="file" wire:model="comprobante" accept=".pdf,.jpg,.jpeg,.png,.webp" class="mt-1 block w-full text-sm" />
+                                            <flux:label>Comprobante{{ $medio === 'Efectivo' ? ' (opcional en efectivo)' : '' }}</flux:label>
+                                            <input type="file" multiple wire:model="comprobante" accept=".pdf,.jpg,.jpeg,.png,.webp" class="mt-1 block w-full text-sm" />
+                                            @error('comprobante') <flux:text class="text-sm text-red-500">{{ $message }}</flux:text> @enderror
+                                            @error('comprobante.*') <flux:text class="text-sm text-red-500">{{ $message }}</flux:text> @enderror
                                         </div>
+                                        @error('monto') <flux:text class="sm:col-span-2 text-sm text-red-500">{{ $message }}</flux:text> @enderror
                                         <flux:button type="submit" variant="primary" class="sm:col-span-2 !bg-[#142f44] hover:!bg-[#0d2032]">Registrar pago</flux:button>
                                     </form>
                                 @else
-                                    <flux:badge color="green">Atendida</flux:badge>
+                                    <div class="flex flex-col items-start gap-1">
+                                        <flux:badge color="green">Atendida</flux:badge>
+                                        @foreach ($solicitud->pagos as $pago)
+                                            @if ($pago->nombre_archivo)
+                                                <a href="{{ route('tesoreria.pagos.download', $pago) }}" class="text-xs text-blue-600 underline hover:text-blue-800">
+                                                    {{ $pago->nombre_original ?? 'Comprobante' }}
+                                                </a>
+                                            @endif
+                                        @endforeach
+                                    </div>
                                 @endif
                             </td>
                         </tr>

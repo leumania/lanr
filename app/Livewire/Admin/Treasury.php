@@ -21,7 +21,7 @@ class Treasury extends Component
     public string $operacion = '';
     public string $fecha = '';
     public string $monto = '';
-    public $comprobante;
+    public array $comprobante = [];
     public $evidenciaReembolso;
 
     public function mount(): void
@@ -40,26 +40,39 @@ class Treasury extends Component
         })->findOrFail($solicitudId);
         abort_unless($solicitud->estado === 'Pendiente', 400);
 
+        $esEfectivo = $this->medio === 'Efectivo';
+
         $this->validate([
             'medio' => 'required|string|max:50',
             'medioOtro' => $this->medio === 'Otro' ? 'required|string|max:50' : 'nullable|string|max:50',
             'banco' => 'nullable|string|max:100',
             'operacion' => 'nullable|string|max:100',
             'fecha' => 'required|date',
-            'comprobante' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'monto' => 'required|numeric|min:0.01',
+            'comprobante' => $esEfectivo ? 'nullable|array|max:5' : 'required|array|min:1|max:5',
+            'comprobante.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
         ]);
 
-        abort_unless(abs((float) $this->monto - (float) $solicitud->monto) < 0.01, 422, 'El monto debe coincidir con la solicitud.');
+        if (abs((float) $this->monto - (float) $solicitud->monto) >= 0.01) {
+            $this->addError('monto', 'El monto debe coincidir exactamente con el de la solicitud: S/ '.number_format($solicitud->monto, 2).'.');
+
+            return;
+        }
 
         DB::transaction(function () use ($solicitud): void {
-            $solicitud->pagos()->create([
-                'nombre_original' => $this->comprobante->getClientOriginalName(),
-                'nombre_archivo' => $this->comprobante->store('pagos-tesoreria', 'public'),
-                'medio_pago' => $this->medio === 'Otro' ? $this->medioOtro : $this->medio,
-                'banco' => $this->banco ?: null,
-                'monto' => $solicitud->monto,
-                'nro_operacion' => $this->operacion ?: null,
-            ]);
+            $archivos = $this->comprobante !== [] ? $this->comprobante : [null];
+
+            foreach ($archivos as $archivo) {
+                $solicitud->pagos()->create([
+                    'nombre_original' => $archivo?->getClientOriginalName(),
+                    'nombre_archivo' => $archivo?->store('pagos-tesoreria', 'public'),
+                    'medio_pago' => $this->medio === 'Otro' ? $this->medioOtro : $this->medio,
+                    'banco' => $this->banco ?: null,
+                    'monto' => $solicitud->monto,
+                    'nro_operacion' => $this->operacion ?: null,
+                ]);
+            }
+
             $solicitud->update(['estado' => 'Atendida', 'fecha_atencion' => now()]);
 
             if (in_array($solicitud->origen, ['REQ-Compra', 'REQ-Cotizacion'], true)) {
@@ -111,7 +124,8 @@ class Treasury extends Component
 
     protected function resetPaymentForm(): void
     {
-        $this->reset(['medioOtro', 'banco', 'operacion', 'monto', 'comprobante']);
+        $this->reset(['medioOtro', 'banco', 'operacion', 'monto']);
+        $this->comprobante = [];
         $this->fecha = now()->format('Y-m-d');
     }
 
@@ -121,7 +135,7 @@ class Treasury extends Component
 
         $solicitudes = SolicitudTesoreria::whereHas('tramite', fn ($query) => $query->where('obra_id', $obraId))
             ->whereIn('origen', ['REQ-Compra', 'REQ-Cotizacion', 'REQ-Reembolso'])
-            ->with('tramite', 'solicitante')
+            ->with('tramite', 'solicitante', 'pagos')
             ->orderByRaw("CASE WHEN estado = 'Pendiente' THEN 0 ELSE 1 END")
             ->latest()
             ->get();
