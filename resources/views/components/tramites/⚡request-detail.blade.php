@@ -1053,10 +1053,17 @@ new class extends Component
             <flux:heading size="lg" class="mb-3">Documentos de respaldo</flux:heading>
             <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                 @foreach ($tramite->attachments->sortBy('orden') as $adjunto)
-                    <a href="{{ route('tramites.attachments.download', [$tramite, $adjunto]) }}" class="flex items-center justify-between gap-3 py-3 text-sm hover:text-emerald-600">
+                    <div class="flex items-center justify-between gap-3 py-3 text-sm">
                         <span class="truncate">{{ $adjunto->nombre_original }}</span>
-                        <flux:icon.arrow-down-tray class="size-4 shrink-0" />
-                    </a>
+                        <span class="flex shrink-0 items-center gap-3">
+                            <a href="{{ route('tramites.attachments.view', [$tramite, $adjunto]) }}" target="_blank" class="hover:text-blue-600" title="Ver">
+                                <flux:icon.eye class="size-4" />
+                            </a>
+                            <a href="{{ route('tramites.attachments.download', [$tramite, $adjunto]) }}" class="hover:text-emerald-600" title="Descargar">
+                                <flux:icon.arrow-down-tray class="size-4" />
+                            </a>
+                        </span>
+                    </div>
                 @endforeach
             </div>
         </flux:card>

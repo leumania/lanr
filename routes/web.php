@@ -114,6 +114,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Storage::disk('public')->download($attachment->nombre_archivo, $attachment->nombre_original);
     })->name('tramites.attachments.download');
 
+    Route::get('tramites/{tramite}/adjuntos/{attachment}/ver', function (Tramite $tramite, Attachment $attachment) {
+        auth()->user()->can('view', $tramite) || abort(404);
+        abort_unless($attachment->tramite_id === $tramite->id, 404);
+
+        return Storage::disk('public')->response($attachment->nombre_archivo, $attachment->nombre_original);
+    })->name('tramites.attachments.view');
+
     Route::get('items/{item}/imagenes/{imagen}', function (\App\Models\Item $item, ItemImagen $imagen) {
         abort_unless($imagen->item_id === $item->id, 404);
         abort_unless(auth()->user()->can('view', $item->tramite), 404);
