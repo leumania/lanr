@@ -13,7 +13,6 @@ class TramitePolicy
             return false;
         }
 
-        return $tramite->estado !== 'Pendiente de mi revisión'
-            || $tramite->creador_id === $user->id;
+        return $tramite->esVisiblePara($user);
     }
 }

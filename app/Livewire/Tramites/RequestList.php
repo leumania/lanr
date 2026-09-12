@@ -65,10 +65,7 @@ class RequestList extends Component
     {
         return Tramite::query()
             ->where('obra_id', auth()->user()->obra_activa_id)
-            ->where(function ($query) {
-                $query->where('creador_id', auth()->id())
-                    ->orWhere('estado', '!=', 'Pendiente de mi revisión');
-            });
+            ->visibleParaUsuario(auth()->user());
     }
 
     protected function aplicarFlujo(Builder $query, string $flujo): Builder

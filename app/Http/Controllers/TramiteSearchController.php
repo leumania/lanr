@@ -20,10 +20,7 @@ class TramiteSearchController
                     ->orWhere('beneficiario', 'like', "%{$term}%")
                     ->orWhere('tipo', 'like', "%{$term}%");
             })
-            ->where(function ($query) use ($request) {
-                $query->where('creador_id', $request->user()->id)
-                    ->orWhere('estado', '!=', 'Pendiente de mi revisión');
-            })
+            ->visibleParaUsuario($request->user())
             ->with('creador:id,name')
             ->latest()
             ->limit(25)

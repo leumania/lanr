@@ -32,6 +32,41 @@ class Tramite extends Model
         return $this->belongsTo(User::class, 'creador_id');
     }
 
+    /**
+     * Un trámite en 'Pendiente de mi revisión' solo lo ve su creador; un REQ en
+     * 'Pendiente de aprobación' solo lo ven el creador y los aprobadores asignados
+     * (approvals). Cualquier otro estado es visible para toda la obra.
+     */
+    public function scopeVisibleParaUsuario($query, User $user)
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where('creador_id', $user->id)
+                ->orWhere(function ($sub) use ($user) {
+                    $sub->where('estado', '!=', 'Pendiente de mi revisión')
+                        ->where(function ($restriccion) use ($user) {
+                            $restriccion->where(function ($noEsReqPendienteAprobacion) {
+                                $noEsReqPendienteAprobacion->where('tipo', '!=', 'REQ')
+                                    ->orWhere('estado', '!=', 'Pendiente de aprobación');
+                            })->orWhereHas('approvals', fn ($a) => $a->where('usuario_id', $user->id));
+                        });
+                });
+        });
+    }
+
+    public function esVisiblePara(User $user): bool
+    {
+        if ($this->estado === 'Pendiente de mi revisión') {
+            return $this->creador_id === $user->id;
+        }
+
+        if ($this->tipo === 'REQ' && $this->estado === 'Pendiente de aprobación') {
+            return $this->creador_id === $user->id
+                || $this->approvals()->where('usuario_id', $user->id)->exists();
+        }
+
+        return true;
+    }
+
     public function obra(): BelongsTo
     {
         return $this->belongsTo(Obra::class);
