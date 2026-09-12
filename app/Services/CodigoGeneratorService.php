@@ -6,10 +6,10 @@ use App\Models\Tramite;
 
 class CodigoGeneratorService
 {
-    public function nextTracking(string $tipo, string $year): string
+    public function nextTracking(string $tipo, string $year, string $obraCodigo): string
     {
         $prefijo = $tipo === 'REQ' ? 'REQ' : 'SP';
-        $patron = "{$prefijo}-LAVEGA-{$year}-%";
+        $patron = "{$prefijo}-{$obraCodigo}-{$year}-%";
 
         $ultimo = Tramite::where('tracking', 'like', $patron)
             ->orderByDesc('id')
@@ -22,7 +22,7 @@ class CodigoGeneratorService
             $siguiente = (int) end($partes) + 1;
         }
 
-        return sprintf('%s-LAVEGA-%s-%03d', $prefijo, $year, $siguiente);
+        return sprintf('%s-%s-%s-%03d', $prefijo, $obraCodigo, $year, $siguiente);
     }
 
     public function formatoF01A(string $numero): string

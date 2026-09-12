@@ -66,6 +66,15 @@ class User extends Authenticatable
         );
     }
 
+    public function scopeActiveAssignedToObra($query, int $obraId)
+    {
+        return $query->where('active', true)
+            ->where(function ($q) use ($obraId) {
+                $q->where('obra_activa_id', $obraId)
+                    ->orWhereHas('obras', fn ($assigned) => $assigned->whereKey($obraId));
+            });
+    }
+
     public function accessibleObras()
     {
         return Obra::query()

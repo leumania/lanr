@@ -32,7 +32,8 @@ test('creator can edit a pending requirement without changing its workflow state
 
     $this->actingAs($user);
     Livewire::test('tramites.edit-request', ['tramite' => $tramite])
-        ->set('numero', '2-2026')
+        ->set('numeroSecuencial', '2')
+        ->set('anioActual', 2026)
         ->set('items.0.descripcion', 'Actualizado')
         ->call('save')
         ->assertHasNoErrors();

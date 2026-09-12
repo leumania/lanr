@@ -149,7 +149,7 @@ new class extends Component
     public function save(CodigoGeneratorService $codigos)
     {
         $this->validate([
-            'numeroSecuencial' => 'required|string|max:20',
+            'numeroSecuencial' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'fecha' => 'required|date',
             'obra_id' => 'required|exists:obras,id',
             'items' => 'required|array|min:1',
@@ -161,17 +161,61 @@ new class extends Component
             'imagenes' => 'array',
             'imagenes.*' => 'array|max:5',
             'imagenes.*.*' => 'file|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ], [
+            'numeroSecuencial.regex' => 'El número de requerimiento solo debe contener dígitos.',
         ]);
 
         abort_unless(auth()->user()->hasAccessToObra($this->obra_id), 403);
 
+        $user = auth()->user();
+        $esRolDeOficina = $user->hasAnyRole(['Administración', 'Logística', 'Tesorería', 'Sistemas'])
+            && ! $user->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento']);
+
+        if ($esRolDeOficina) {
+            $seccionesUsadas = collect($this->items)
+                ->filter(fn ($item) => trim($item['descripcion']) !== '')
+                ->pluck('seccion')
+                ->unique();
+
+            if ($seccionesUsadas->contains(fn ($seccion) => $seccion !== 'Útiles de Oficina')) {
+                $this->addError('items', 'Su rol solo puede registrar requerimientos de Útiles de oficina.');
+
+                return;
+            }
+        }
+
         $numero = "{$this->numeroSecuencial}-{$this->anioActual}";
 
-        $tid = DB::transaction(function () use ($codigos, $numero) {
+        $duplicado = Tramite::where('obra_id', $this->obra_id)
+            ->where('tipo', 'REQ')
+            ->whereRaw('LOWER(TRIM(numero)) = ?', [mb_strtolower(trim($numero))])
+            ->exists();
+
+        if ($duplicado) {
+            $this->addError('numeroSecuencial', "Ya existe un requerimiento con el número {$numero} en esta obra.");
+
+            return;
+        }
+
+        $obra = \App\Models\Obra::findOrFail($this->obra_id);
+
+        $aprobadores = [
+            'Control y Planeamiento' => User::role('Control y Planeamiento')->activeAssignedToObra($obra->id)->first(),
+            'Gerencia de Obra' => User::role('Gerencia de Obra')->activeAssignedToObra($obra->id)->first(),
+        ];
+
+        foreach ($aprobadores as $rol => $usuario) {
+            if (! $usuario) {
+                $this->addError('numeroSecuencial', "No hay un usuario activo con el rol {$rol} asignado a esta obra. No se puede registrar el requerimiento.");
+
+                return;
+            }
+        }
+
+        $tid = DB::transaction(function () use ($codigos, $numero, $obra, $aprobadores) {
             $year = substr($this->fecha, 0, 4);
-            $tracking = $codigos->nextTracking('REQ', $year);
+            $tracking = $codigos->nextTracking('REQ', $year, $obra->codigo);
             $formato = $codigos->formatoF01A($numero);
-            $obra = \App\Models\Obra::findOrFail($this->obra_id);
 
             $tramite = Tramite::create([
                 'tracking' => $tracking,
@@ -218,11 +262,6 @@ new class extends Component
                     ]);
                 }
             }
-
-            $aprobadores = [
-                'Control y Planeamiento' => User::role('Control y Planeamiento')->first(),
-                'Gerencia de Obra' => User::role('Gerencia de Obra')->first(),
-            ];
 
             foreach ($aprobadores as $rol => $usuario) {
                 if ($usuario) {

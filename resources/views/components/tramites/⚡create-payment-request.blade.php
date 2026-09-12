@@ -136,7 +136,7 @@ new class extends Component
     {
         $this->validate([
             'subtipo' => 'required|in:'.implode(',', self::SUBTIPOS),
-            'numeroSecuencial' => 'required|string|max:20',
+            'numeroSecuencial' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'fecha' => 'required|date',
             'moneda' => 'required|in:PEN,USD',
             'obra_id' => 'required|exists:obras,id',
@@ -161,7 +161,9 @@ new class extends Component
             'otrosDocumentos' => 'array|max:10',
             'otrosDocumentos.*' => 'file|mimes:pdf|max:10240',
             'observaciones' => 'nullable|string',
-        ], [], [
+        ], [
+            'numeroSecuencial.regex' => 'El número de solicitud solo debe contener dígitos.',
+        ], [
             'numeroSecuencial' => 'número de solicitud',
             'subtipo' => 'tipo de solicitud',
         ]);
@@ -204,10 +206,24 @@ new class extends Component
 
         $primeraCuenta = collect($this->cuentas)->first(fn ($c) => trim($c['banco'] ?? '') !== '' || trim($c['cuenta_cci'] ?? '') !== '');
 
-        DB::transaction(function () use ($codigos, $numero, $modalidadesTexto, $primeraCuenta) {
+        $obra = \App\Models\Obra::findOrFail($this->obra_id);
+
+        $aprobadores = [
+            'Logística' => User::role('Logística')->activeAssignedToObra($obra->id)->first(),
+            'Administración' => User::role('Administración')->activeAssignedToObra($obra->id)->first(),
+        ];
+
+        foreach ($aprobadores as $rol => $usuario) {
+            if (! $usuario) {
+                $this->addError('numeroSecuencial', "No hay un usuario activo con el rol {$rol} asignado a esta obra. No se puede registrar la solicitud.");
+
+                return;
+            }
+        }
+
+        DB::transaction(function () use ($codigos, $numero, $modalidadesTexto, $primeraCuenta, $obra, $aprobadores) {
             $year = substr($this->fecha, 0, 4);
-            $tracking = $codigos->nextTracking('SP', $year);
-            $obra = \App\Models\Obra::findOrFail($this->obra_id);
+            $tracking = $codigos->nextTracking('SP', $year, $obra->codigo);
 
             $observaciones = $this->observaciones;
             if ($this->usarAmortizacion) {
@@ -311,11 +327,6 @@ new class extends Component
                     'orden' => $orden + 1,
                 ]);
             }
-
-            $aprobadores = [
-                'Logística' => User::role('Logística')->first(),
-                'Administración' => User::role('Administración')->first(),
-            ];
 
             foreach ($aprobadores as $rol => $usuario) {
                 if ($usuario) {
