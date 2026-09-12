@@ -37,9 +37,17 @@ class Reimbursements extends Component
             'archivos' => 'array|max:10', 'archivos.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
         ]);
 
-        DB::transaction(function (): void {
-            $numero = $this->numero ?: 'RR-' . substr($this->fecha, 0, 4) . '-' . str_pad((string) (Reembolso::where('obra_id', auth()->user()->obra_activa_id)->count() + 1), 3, '0', STR_PAD_LEFT);
-            $reembolso = Reembolso::create(['obra_id' => auth()->user()->obra_activa_id, 'tipo' => $this->tipo, 'numero' => $numero, 'fecha' => $this->fecha, 'solicitante_id' => auth()->id(), 'concepto' => $this->concepto, 'monto' => $this->monto, 'moneda' => $this->moneda, 'observaciones' => $this->observaciones ?: null, 'estado' => 'Pendiente']);
+        $obraId = auth()->user()->obra_activa_id;
+        $numero = $this->numero ?: 'RR-' . substr($this->fecha, 0, 4) . '-' . str_pad((string) (Reembolso::where('obra_id', $obraId)->count() + 1), 3, '0', STR_PAD_LEFT);
+
+        if (Reembolso::where('obra_id', $obraId)->where('numero', $numero)->exists()) {
+            $this->addError('numero', "Ya existe un reembolso/rendición con el número {$numero} en esta obra.");
+
+            return;
+        }
+
+        DB::transaction(function () use ($obraId, $numero): void {
+            $reembolso = Reembolso::create(['obra_id' => $obraId, 'tipo' => $this->tipo, 'numero' => $numero, 'fecha' => $this->fecha, 'solicitante_id' => auth()->id(), 'concepto' => $this->concepto, 'monto' => $this->monto, 'moneda' => $this->moneda, 'observaciones' => $this->observaciones ?: null, 'estado' => 'Pendiente']);
             foreach ($this->archivos as $archivo) {
                 $reembolso->adjuntos()->create(['nombre_original' => $archivo->getClientOriginalName(), 'nombre_archivo' => $archivo->store('reembolsos', 'public')]);
             }

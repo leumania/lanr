@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\Item;
 use App\Models\UnidadCatalogo;
 use Livewire\Component;
 
@@ -78,7 +79,18 @@ class UnitManagement extends Component
 
     public function delete(int $id): void
     {
-        UnidadCatalogo::findOrFail($id)->delete();
+        $unidad = UnidadCatalogo::findOrFail($id);
+
+        $enUso = Item::whereRaw('UPPER(TRIM(unidad)) = ?', [mb_strtoupper(trim($unidad->abreviatura))])->exists();
+
+        if ($enUso) {
+            $unidad->update(['active' => false]);
+            session()->flash('status', 'La unidad ya fue usada en trámites, por lo que se desactivó para conservar el historial en vez de eliminarla.');
+
+            return;
+        }
+
+        $unidad->delete();
         session()->flash('status', 'Unidad eliminada correctamente.');
     }
 

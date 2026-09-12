@@ -18,6 +18,7 @@ class RoleSeeder extends Seeder
             'Logística',
             'Tesorería',
             'Sistemas',
+            'Contabilidad',
         ];
 
         foreach ($roles as $role) {
