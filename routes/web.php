@@ -36,6 +36,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('ordenes', 'admin.orders')->name('admin.orders');
     Route::view('regularizaciones', 'admin.regularizations')->name('admin.regularizations');
     Route::get('api/tramites/search', TramiteSearchController::class)->name('tramites.search.api');
+
+    Route::get('notificaciones/{notificacion}/abrir', function (\App\Models\Notificacion $notificacion) {
+        abort_unless($notificacion->usuario_id === auth()->id(), 404);
+
+        if (! $notificacion->leida) {
+            $notificacion->update(['leida' => true]);
+        }
+
+        return $notificacion->tramite_id
+            ? redirect()->route('tramites.show', $notificacion->tramite_id)
+            : redirect()->route('dashboard');
+    })->name('notificaciones.abrir');
     Route::get('obras', function () {
         abort_unless(auth()->user()->hasAnyRole(['Gerencia General', 'Sistemas', 'Gerencia de Obra']), 403);
 

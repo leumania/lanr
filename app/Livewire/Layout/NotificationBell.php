@@ -15,7 +15,12 @@ class NotificationBell extends Component
     public function render()
     {
         return view('livewire.layout.notification-bell', [
-            'notificaciones' => Notificacion::query()->where('usuario_id', auth()->id())->latest()->take(8)->get(),
+            'notificaciones' => Notificacion::query()
+                ->where('usuario_id', auth()->id())
+                ->orderBy('leida')
+                ->orderByDesc('id')
+                ->take(10)
+                ->get(),
             'pendientes' => Notificacion::query()->where('usuario_id', auth()->id())->where('leida', false)->count(),
         ]);
     }
