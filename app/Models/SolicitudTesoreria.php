@@ -11,7 +11,7 @@ class SolicitudTesoreria extends Model
     protected $table = 'solicitudes_tesoreria';
 
     protected $fillable = [
-        'tramite_id', 'solicitado_por', 'motivo', 'monto', 'estado',
+        'tramite_id', 'autorizacion_id', 'solicitado_por', 'motivo', 'monto', 'estado',
         'origen', 'fecha_solicitud', 'fecha_atencion',
     ];
 
@@ -26,6 +26,11 @@ class SolicitudTesoreria extends Model
     public function tramite(): BelongsTo
     {
         return $this->belongsTo(Tramite::class);
+    }
+
+    public function autorizacion(): BelongsTo
+    {
+        return $this->belongsTo(AutorizacionCompra::class, 'autorizacion_id');
     }
 
     public function solicitante(): BelongsTo

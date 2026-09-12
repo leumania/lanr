@@ -30,6 +30,20 @@ new class extends Component
             ->all();
     }
 
+    protected function notificarRoles(array $roles, string $titulo, string $mensaje, string $tipo = 'informativa'): void
+    {
+        User::role($roles)
+            ->activeAssignedToObra($this->tramite->obra_id)
+            ->get()
+            ->each(fn (User $destinatario) => Notificacion::create([
+                'usuario_id' => $destinatario->id,
+                'tramite_id' => $this->tramite->id,
+                'titulo' => $titulo,
+                'mensaje' => $mensaje,
+                'tipo' => $tipo,
+            ]));
+    }
+
     public function creatorApprove(): void
     {
         abort_unless($this->tramite->creador_id === auth()->id(), 403);
@@ -565,6 +579,13 @@ new class extends Component
                 'usuario_id' => $user->id,
                 'accion' => 'Requerimiento enviado a obra',
             ]);
+
+            $this->notificarRoles(
+                ['Gerencia de Obra', 'Control y Planeamiento'],
+                'Requerimiento enviado a obra',
+                "El requerimiento {$this->tramite->tracking} fue despachado y está en camino. Confirma la recepción cuando llegue.",
+                'accion'
+            );
         });
 
         session()->flash('status', 'Envío a obra registrado correctamente.');
@@ -591,6 +612,12 @@ new class extends Component
                 'usuario_id' => $user->id,
                 'accion' => 'Recepción confirmada en obra',
             ]);
+
+            $this->notificarRoles(
+                ['Gerencia General', 'Administración', 'Logística', 'Tesorería'],
+                'Requerimiento cerrado',
+                "El requerimiento {$this->tramite->tracking} fue recibido en obra y quedó cerrado."
+            );
         });
 
         session()->flash('status', 'Recepción en obra confirmada. Trámite cerrado.');
@@ -756,6 +783,12 @@ new class extends Component
                 'usuario_id' => $user->id,
                 'accion' => 'Conformidad final registrada por Gerencia General',
             ]);
+
+            $this->notificarRoles(
+                ['Control y Planeamiento', 'Gerencia de Obra'],
+                'Solicitud de pago cerrada',
+                "La solicitud {$this->tramite->tracking} recibió la conformidad final de Gerencia General y quedó cerrada."
+            );
         });
 
         session()->flash('status', 'Solicitud cerrada con conformidad de Gerencia General.');

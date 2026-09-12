@@ -20,4 +20,5 @@ class AutorizacionCompra extends Model
     public function tramite(): BelongsTo { return $this->belongsTo(Tramite::class); }
     public function autorizador(): BelongsTo { return $this->belongsTo(User::class, 'autorizado_por'); }
     public function items(): HasMany { return $this->hasMany(AutorizacionItem::class, 'autorizacion_id'); }
+    public function solicitudesTesoreria(): HasMany { return $this->hasMany(SolicitudTesoreria::class, 'autorizacion_id'); }
 }

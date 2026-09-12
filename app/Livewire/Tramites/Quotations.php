@@ -146,10 +146,30 @@ class Quotations extends Component
                 }
             }
             foreach ($totales as $proveedorId => $monto) {
-                SolicitudTesoreria::create(['tramite_id' => $this->tramite->id, 'solicitado_por' => auth()->id(), 'motivo' => "Pago de cotización autorizada del proveedor {$proveedorId}", 'monto' => $monto, 'estado' => 'Pendiente', 'origen' => 'REQ-Cotizacion', 'fecha_solicitud' => now()]);
+                $proveedor = \App\Models\Proveedor::find($proveedorId);
+                SolicitudTesoreria::create([
+                    'tramite_id' => $this->tramite->id,
+                    'autorizacion_id' => $autorizacion->id,
+                    'solicitado_por' => auth()->id(),
+                    'motivo' => 'Pago de cotización autorizada del proveedor '.($proveedor->nombre ?? $proveedorId),
+                    'monto' => $monto,
+                    'estado' => 'Pendiente',
+                    'origen' => 'REQ-Cotizacion',
+                    'fecha_solicitud' => now(),
+                ]);
             }
             $this->tramite->update(['estado' => 'En gestión de compra']);
             History::create(['tramite_id' => $this->tramite->id, 'usuario_id' => auth()->id(), 'accion' => 'Cotización autorizada por Administración']);
+
+            foreach (User::role('Tesorería')->activeAssignedToObra($this->tramite->obra_id)->get() as $tesoreria) {
+                Notificacion::create([
+                    'usuario_id' => $tesoreria->id,
+                    'tramite_id' => $this->tramite->id,
+                    'titulo' => 'Compra autorizada pendiente de pago',
+                    'mensaje' => "La compra del requerimiento {$this->tramite->tracking} fue autorizada y tiene pagos pendientes.",
+                    'tipo' => 'accion',
+                ]);
+            }
         });
         $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'autorizacionesCompra.items.proveedor']);
         session()->flash('status', 'Compra autorizada y enviada a Tesorería.');
@@ -163,14 +183,14 @@ class Quotations extends Component
         $this->validate(['motivoAnulacion' => 'required|string|min:5|max:1000']);
 
         abort_if(
-            $this->tramite->solicitudesTesoreria()->where('origen', 'REQ-Cotizacion')->where('estado', 'Atendida')->exists(),
+            $autorizacion->solicitudesTesoreria()->where('estado', 'Atendida')->exists(),
             422,
             'No se puede anular una autorización con pagos atendidos.'
         );
 
         DB::transaction(function () use ($autorizacion): void {
             $autorizacion->update(['estado' => 'Anulada', 'motivo_anulacion' => $this->motivoAnulacion, 'anulada_fecha' => now()]);
-            $this->tramite->solicitudesTesoreria()->where('origen', 'REQ-Cotizacion')->where('estado', 'Pendiente')->update(['estado' => 'Anulado']);
+            $autorizacion->solicitudesTesoreria()->where('estado', 'Pendiente')->update(['estado' => 'Anulado']);
             $this->tramite->update(['estado' => 'Cotizaciones en gestión']);
             History::create(['tramite_id' => $this->tramite->id, 'usuario_id' => auth()->id(), 'accion' => 'Autorización de compra anulada: ' . $this->motivoAnulacion]);
         });
