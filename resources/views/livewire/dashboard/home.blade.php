@@ -111,4 +111,78 @@
             </div>
         @endif
     </flux:card>
+
+    @if (auth()->user()->hasRole('Logística'))
+        <flux:card class="p-4">
+            <flux:heading size="lg" class="text-[#142f44]">Pendientes de Logística</flux:heading>
+            <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+                @forelse ($pendientesLogistica as $t)
+                    <a href="{{ route('tramites.show', $t) }}" wire:navigate class="flex items-center justify-between py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <div>
+                            <div class="font-semibold text-[#142f44] dark:text-white">{{ $t->tracking }}</div>
+                            <div class="text-sm text-zinc-500">{{ $t->creador?->name }}</div>
+                        </div>
+                        <flux:badge size="sm" color="blue">{{ $t->pendiente_de }}</flux:badge>
+                    </a>
+                @empty
+                    <flux:text class="py-4 text-zinc-500">No hay requerimientos pendientes de Logística.</flux:text>
+                @endforelse
+            </div>
+        </flux:card>
+    @endif
+
+    @if (auth()->user()->hasRole('Gerencia General'))
+        <flux:card class="p-4">
+            <flux:heading size="lg" class="text-[#142f44]">Solicitudes pendientes de asignar pago</flux:heading>
+            <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+                @forelse ($spPendientesAsignacion as $t)
+                    <a href="{{ route('tramites.show', $t) }}" wire:navigate class="flex items-center justify-between py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <div>
+                            <div class="font-semibold text-[#142f44] dark:text-white">{{ $t->tracking }}</div>
+                            <div class="text-sm text-zinc-500">{{ $t->creador?->name }} · S/ {{ number_format($t->abono, 2) }}</div>
+                        </div>
+                        <flux:badge size="sm" color="purple">Asignar pago</flux:badge>
+                    </a>
+                @empty
+                    <flux:text class="py-4 text-zinc-500">No hay solicitudes pendientes de asignación.</flux:text>
+                @endforelse
+            </div>
+        </flux:card>
+
+        <flux:card class="p-4">
+            <flux:heading size="lg" class="text-[#142f44]">Solicitudes pendientes de conformidad final</flux:heading>
+            <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+                @forelse ($spPendientesConformidad as $t)
+                    <a href="{{ route('tramites.show', $t) }}" wire:navigate class="flex items-center justify-between py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <div>
+                            <div class="font-semibold text-[#142f44] dark:text-white">{{ $t->tracking }}</div>
+                            <div class="text-sm text-zinc-500">{{ $t->creador?->name }} · Pagado: S/ {{ number_format($t->gestionSp->monto_pagado ?? 0, 2) }}</div>
+                        </div>
+                        <flux:badge size="sm" color="yellow">Confirmar</flux:badge>
+                    </a>
+                @empty
+                    <flux:text class="py-4 text-zinc-500">No hay solicitudes pendientes de conformidad.</flux:text>
+                @endforelse
+            </div>
+        </flux:card>
+    @endif
+
+    @if (auth()->user()->hasRole('Tesorería'))
+        <flux:card class="p-4">
+            <flux:heading size="lg" class="text-[#142f44]">Solicitudes de pago asignadas a Tesorería</flux:heading>
+            <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+                @forelse ($spTesoreria as $t)
+                    <a href="{{ route('tramites.show', $t) }}" wire:navigate class="flex items-center justify-between py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <div>
+                            <div class="font-semibold text-[#142f44] dark:text-white">{{ $t->tracking }}</div>
+                            <div class="text-sm text-zinc-500">{{ $t->creador?->name }} · S/ {{ number_format($t->abono, 2) }}</div>
+                        </div>
+                        <flux:badge size="sm" color="purple">Registrar pago</flux:badge>
+                    </a>
+                @empty
+                    <flux:text class="py-4 text-zinc-500">No hay solicitudes asignadas a Tesorería.</flux:text>
+                @endforelse
+            </div>
+        </flux:card>
+    @endif
 </div>

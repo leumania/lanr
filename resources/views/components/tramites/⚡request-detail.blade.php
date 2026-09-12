@@ -602,7 +602,7 @@ new class extends Component
     public function asignarPagoSp(): void
     {
         $user = auth()->user();
-        abort_unless($user->username === 'lNeyra' || $user->hasRole('Gerencia General'), 403);
+        abort_unless($user->hasRole('Gerencia General'), 403);
         abort_unless($this->tramite->tipo === 'SP' && $this->tramite->estado === 'Pendiente asignación de pago', 400);
 
         DB::transaction(function () use ($user) {
@@ -651,9 +651,9 @@ new class extends Component
         $puedePagar = false;
 
         if ($gestion?->asignado_pago === 'Tesorería' && in_array($this->tramite->estado, ['Asignada a Tesorería', 'Pago parcial'])) {
-            $puedePagar = $user->username === 'yCoronado';
+            $puedePagar = $user->hasRole('Tesorería');
         } elseif ($gestion?->asignado_pago === 'Gerencia General' && in_array($this->tramite->estado, ['Asignada a Gerencia General', 'Pago parcial'])) {
-            $puedePagar = $user->username === 'lNeyra';
+            $puedePagar = $user->hasRole('Gerencia General');
         }
 
         abort_unless($puedePagar, 403);
@@ -733,7 +733,7 @@ new class extends Component
     public function confirmarPagoSp(): void
     {
         $user = auth()->user();
-        abort_unless($user->username === 'lNeyra', 403);
+        abort_unless($user->hasRole('Gerencia General'), 403);
         abort_unless($this->tramite->tipo === 'SP' && $this->tramite->estado === 'Pagada pendiente conformidad GG', 400);
 
         $gestion = $this->tramite->gestionSp;
@@ -1014,7 +1014,7 @@ new class extends Component
         @endif
 
         @if ($tramite->estado === 'Pendiente asignación de pago')
-            @if (auth()->user()->username === 'lNeyra')
+            @if (auth()->user()->hasRole('Gerencia General'))
                 <form wire:submit="asignarPagoSp" class="flex flex-col gap-4">
                     <flux:select label="¿Quién realizará el pago?" wire:model="asignado_pago">
                         <flux:select.option value="Tesorería">Tesorería</flux:select.option>
@@ -1032,8 +1032,8 @@ new class extends Component
         @if (in_array($tramite->estado, ['Asignada a Tesorería', 'Asignada a Gerencia General', 'Pago parcial']))
             @php
                 $puedeRegistrarPago =
-                    (in_array($tramite->estado, ['Asignada a Tesorería', 'Pago parcial']) && $tramite->gestionSp?->asignado_pago === 'Tesorería' && auth()->user()->username === 'yCoronado') ||
-                    (in_array($tramite->estado, ['Asignada a Gerencia General', 'Pago parcial']) && $tramite->gestionSp?->asignado_pago === 'Gerencia General' && auth()->user()->username === 'lNeyra');
+                    (in_array($tramite->estado, ['Asignada a Tesorería', 'Pago parcial']) && $tramite->gestionSp?->asignado_pago === 'Tesorería' && auth()->user()->hasRole('Tesorería')) ||
+                    (in_array($tramite->estado, ['Asignada a Gerencia General', 'Pago parcial']) && $tramite->gestionSp?->asignado_pago === 'Gerencia General' && auth()->user()->hasRole('Gerencia General'));
             @endphp
 
             @if ($puedeRegistrarPago)
@@ -1088,7 +1088,7 @@ new class extends Component
                     {{ $tramite->gestionSp->fecha_pago?->format('Y-m-d') }}
                 </flux:text>
 
-                @if (auth()->user()->username === 'lNeyra')
+                @if (auth()->user()->hasRole('Gerencia General'))
                     <div>
                         <flux:button variant="primary" wire:click="confirmarPagoSp">
                             Confirmar conformidad final

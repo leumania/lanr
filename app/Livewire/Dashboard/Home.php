@@ -77,6 +77,61 @@ class Home extends Component
             ->sortByDesc(fn ($approval) => $approval->tramite->id)
             ->values();
 
+        $pendientesLogistica = collect();
+
+        if ($user->hasRole('Logística')) {
+            $pendientesLogistica = $tramites()
+                ->with(['creador', 'gestionLogistica'])
+                ->where('tipo', 'REQ')
+                ->whereIn('estado', ['Aprobado', 'Recibido por Logística', 'En gestión de compra'])
+                ->latest('id')
+                ->get()
+                ->map(function (Tramite $t) {
+                    $g = $t->gestionLogistica;
+
+                    $t->pendiente_de = match (true) {
+                        $t->estado === 'Aprobado' => 'Recepcionar',
+                        $t->estado === 'Recibido por Logística' => 'Cotización / compra',
+                        $t->estado === 'En gestión de compra' && blank($g?->estado_pago) => 'Pago',
+                        in_array($g?->estado_pago, ['Pagado por Logística', 'Pagado por Tesorería']) => 'Guía y envío a obra',
+                        default => 'Revisar',
+                    };
+
+                    return $t;
+                });
+        }
+
+        $spPendientesAsignacion = collect();
+        $spPendientesConformidad = collect();
+
+        if ($user->hasRole('Gerencia General')) {
+            $spPendientesAsignacion = $tramites()
+                ->with('creador')
+                ->where('tipo', 'SP')
+                ->where('estado', 'Pendiente asignación de pago')
+                ->latest('id')
+                ->get();
+
+            $spPendientesConformidad = $tramites()
+                ->with(['creador', 'gestionSp'])
+                ->where('tipo', 'SP')
+                ->where('estado', 'Pagada pendiente conformidad GG')
+                ->whereHas('gestionSp', fn ($q) => $q->where('conformidad_gg', false))
+                ->latest('id')
+                ->get();
+        }
+
+        $spTesoreria = collect();
+
+        if ($user->hasRole('Tesorería')) {
+            $spTesoreria = $tramites()
+                ->with(['creador', 'gestionSp'])
+                ->where('tipo', 'SP')
+                ->where('estado', 'Asignada a Tesorería')
+                ->latest('id')
+                ->get();
+        }
+
         return view('livewire.dashboard.home', [
             'activos' => $activos,
             'porAprobar' => $porAprobar,
@@ -85,6 +140,10 @@ class Home extends Component
             'cuartoLabel' => $cuartoLabel,
             'cuartoValor' => $cuartoValor,
             'pendientesAprobacion' => $pendientesAprobacion,
+            'pendientesLogistica' => $pendientesLogistica,
+            'spPendientesAsignacion' => $spPendientesAsignacion,
+            'spPendientesConformidad' => $spPendientesConformidad,
+            'spTesoreria' => $spTesoreria,
         ]);
     }
 }
