@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Models\GestionLogistica;
 use App\Models\History;
+use App\Models\Notificacion;
 use App\Models\Reembolso;
 use App\Models\SolicitudTesoreria;
 use App\Models\Tramite;
@@ -88,12 +89,21 @@ class Treasury extends Component
                         ['estado_pago' => 'Pagado por Tesorería', 'forma_pago' => 'Tesorería']
                     );
                 }
+            } elseif ($solicitud->origen === 'REQ-Reembolso') {
+                GestionLogistica::where('tramite_id', $solicitud->tramite_id)->update(['requiere_reembolso' => false]);
             }
 
             History::create([
                 'tramite_id' => $solicitud->tramite_id,
                 'usuario_id' => auth()->id(),
                 'accion' => 'Pago registrado por Tesorería desde la bandeja central',
+            ]);
+
+            Notificacion::create([
+                'usuario_id' => $solicitud->solicitado_por,
+                'tramite_id' => $solicitud->tramite_id,
+                'titulo' => 'Pago atendido por Tesorería',
+                'mensaje' => "Tesorería atendió tu solicitud de pago por S/ ".number_format($solicitud->monto, 2).'.',
             ]);
         });
 

@@ -63,7 +63,7 @@
                             <td class="py-2.5 pe-3 text-zinc-600 dark:text-zinc-300">{{ $solicitud->origen }}</td>
                             <td class="py-2.5 pe-3 font-semibold text-[#142f44] dark:text-white">S/ {{ number_format($solicitud->monto, 2) }}</td>
                             <td class="py-2.5 pe-3">
-                                <flux:badge size="sm" :color="$solicitud->estado === 'Pendiente' ? 'amber' : 'green'">{{ $solicitud->estado }}</flux:badge>
+                                <flux:badge size="sm" :color="match ($solicitud->estado) { 'Pendiente' => 'amber', 'Informativo' => 'blue', default => 'green' }">{{ $solicitud->estado }}</flux:badge>
                             </td>
                             <td class="py-2.5">
                                 @if ($solicitud->estado === 'Pendiente')

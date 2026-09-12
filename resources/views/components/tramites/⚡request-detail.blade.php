@@ -214,7 +214,11 @@ new class extends Component
 
         foreach ($this->tramite->items as $item) {
             $cantidad = (float) ($this->detalle_compra[$item->id]['cantidad'] ?? 0);
-            if ($cantidad > (float) $item->comprar) {
+            $yaComprado = (float) \App\Models\CompraDetalle::where('item_id', $item->id)
+                ->whereHas('compra', fn ($q) => $q->where('tramite_id', $this->tramite->id))
+                ->sum('cantidad_comprada');
+
+            if ($cantidad + $yaComprado > (float) $item->comprar + 0.01) {
                 $this->addError("detalle_compra.{$item->id}.cantidad", 'La cantidad supera lo pendiente de compra.');
                 return;
             }
@@ -305,6 +309,12 @@ new class extends Component
         $this->detalle_regularizacion[] = ['descripcion' => '', 'cantidad' => 0, 'precio_unitario' => 0];
     }
 
+    public function removeDetalleRegularizacion(int $index): void
+    {
+        unset($this->detalle_regularizacion[$index]);
+        $this->detalle_regularizacion = array_values($this->detalle_regularizacion);
+    }
+
     public function addComprobanteDefinitivo(): void
     {
         $this->comprobantes_definitivos[] = [
@@ -384,28 +394,30 @@ new class extends Component
         abort_unless($regularizacion->responsable_id === auth()->id(), 403);
         abort_unless($regularizacion->estado === 'Pendiente', 400);
 
+        $detalleYaExistente = $regularizacion->detalles()->exists();
+
         $this->validate([
             'archivo_regularizacion' => 'required|file|mimes:pdf,jpg,jpeg,png,webp,xml|max:10240',
-            'detalle_regularizacion' => 'array',
-            'detalle_regularizacion.*.descripcion' => 'required_with:detalle_regularizacion.*.cantidad|string|max:255',
-            'detalle_regularizacion.*.cantidad' => 'required_with:detalle_regularizacion.*.descripcion|numeric|min:0.01',
-            'detalle_regularizacion.*.precio_unitario' => 'required_with:detalle_regularizacion.*.descripcion|numeric|min:0',
+            'detalle_regularizacion' => $detalleYaExistente ? 'array' : 'required|array|min:1',
+            'detalle_regularizacion.*.descripcion' => 'required|string|max:255',
+            'detalle_regularizacion.*.cantidad' => 'required|numeric|min:0.01',
+            'detalle_regularizacion.*.precio_unitario' => 'required|numeric|min:0',
         ], [
             'archivo_regularizacion.required' => 'Debes adjuntar el documento de regularización.',
             'archivo_regularizacion.mimes' => 'El documento debe ser PDF, imagen o XML.',
             'archivo_regularizacion.max' => 'El documento no debe superar 10 MB.',
+            'detalle_regularizacion.required' => 'Debes registrar al menos un producto/servicio comprado.',
         ]);
 
         $detalles = $this->detalle_regularizacion;
         $detalleTotal = $detalles !== []
             ? collect($detalles)->sum(fn (array $detalle): float => round((float) $detalle['cantidad'] * (float) $detalle['precio_unitario'], 2))
             : (float) $regularizacion->detalles()->sum('precio_total');
-        if ($detalleTotal > 0) {
-            $compraTotal = (float) \App\Models\CompraLogistica::where('tramite_id', $this->tramite->id)->sum('monto');
-            if (abs($detalleTotal - $compraTotal) > 0.01) {
-                $this->addError('archivo_regularizacion', 'El detalle de regularización debe cuadrar con los comprobantes de compra.');
-                return;
-            }
+
+        $compraTotal = (float) \App\Models\CompraLogistica::where('tramite_id', $this->tramite->id)->sum('monto');
+        if (abs($detalleTotal - $compraTotal) > 0.01) {
+            $this->addError('archivo_regularizacion', 'El detalle de regularización debe cuadrar con los comprobantes de compra.');
+            return;
         }
 
         DB::transaction(function () use ($regularizacion, $detalles) {
@@ -445,23 +457,109 @@ new class extends Component
         $this->refrescar();
     }
 
+    /** Por encima de este monto, la compra debe pagarse por Tesorería (paridad con V10). */
+    protected const MONTO_MAXIMO_CAJA_LOGISTICA = 1900.0;
+
+    protected function bloquearSiSuperaUmbralCaja(): bool
+    {
+        $monto = (float) ($this->tramite->gestionLogistica->monto ?? 0);
+
+        if ($monto >= self::MONTO_MAXIMO_CAJA_LOGISTICA) {
+            session()->flash('error', 'Compras desde S/ '.number_format(self::MONTO_MAXIMO_CAJA_LOGISTICA, 2).' deben pagarse a través de Tesorería.');
+
+            return true;
+        }
+
+        return false;
+    }
+
     public function marcarPagado(): void
     {
         $user = auth()->user();
         abort_unless($user->hasRole('Logística'), 403);
 
-        $this->tramite->gestionLogistica->update([
-            'estado_pago' => 'Pagado por Logística',
-            'forma_pago' => 'Logística',
-        ]);
+        if ($this->bloquearSiSuperaUmbralCaja()) {
+            return;
+        }
 
-        History::create([
-            'tramite_id' => $this->tramite->id,
-            'usuario_id' => $user->id,
-            'accion' => 'Pago de compra registrado por Logística',
-        ]);
+        $gestion = $this->tramite->gestionLogistica;
+
+        DB::transaction(function () use ($user, $gestion): void {
+            $gestion->update([
+                'estado_pago' => 'Pagado por Logística',
+                'forma_pago' => 'Caja Logística',
+                'requiere_reembolso' => false,
+            ]);
+
+            $this->tramite->solicitudesTesoreria()->create([
+                'solicitado_por' => $user->id,
+                'motivo' => 'Compra pagada con Caja Logística (registro informativo).',
+                'monto' => $gestion->monto,
+                'origen' => 'REQ-Compra',
+                'estado' => 'Informativo',
+                'fecha_solicitud' => now(),
+                'fecha_atencion' => now(),
+            ]);
+
+            History::create([
+                'tramite_id' => $this->tramite->id,
+                'usuario_id' => $user->id,
+                'accion' => 'Pago de compra registrado por Logística (Caja Logística)',
+            ]);
+
+            $this->notificarRoles(
+                ['Tesorería'],
+                'Compra pagada con Caja Logística',
+                "El requerimiento {$this->tramite->tracking} fue pagado con Caja Logística por un monto de S/ ".number_format($gestion->monto, 2).'.'
+            );
+        });
 
         session()->flash('status', 'Pago registrado correctamente.');
+        $this->refrescar();
+    }
+
+    public function registrarPagoPersonal(): void
+    {
+        $user = auth()->user();
+        abort_unless($user->hasRole('Logística'), 403);
+
+        if ($this->bloquearSiSuperaUmbralCaja()) {
+            return;
+        }
+
+        $gestion = $this->tramite->gestionLogistica;
+
+        DB::transaction(function () use ($user, $gestion): void {
+            $gestion->update([
+                'estado_pago' => 'Pagado por Logística',
+                'forma_pago' => 'Pago personal',
+                'requiere_reembolso' => true,
+            ]);
+
+            $this->tramite->solicitudesTesoreria()->create([
+                'solicitado_por' => $user->id,
+                'motivo' => 'Reembolso por pago personal de compra en Logística.',
+                'monto' => $gestion->monto,
+                'origen' => 'REQ-Reembolso',
+                'estado' => 'Pendiente',
+                'fecha_solicitud' => now(),
+            ]);
+
+            History::create([
+                'tramite_id' => $this->tramite->id,
+                'usuario_id' => $user->id,
+                'accion' => 'Pago de compra asumido personalmente, pendiente de reembolso',
+            ]);
+
+            $this->notificarRoles(
+                ['Tesorería'],
+                'Reembolso pendiente por pago personal',
+                "El requerimiento {$this->tramite->tracking} fue pagado personalmente por Logística y requiere reembolso de S/ ".number_format($gestion->monto, 2).'.',
+                'accion'
+            );
+        });
+
+        session()->flash('status', 'Pago personal registrado. Se generó una solicitud de reembolso para Tesorería.');
         $this->refrescar();
     }
 
@@ -494,6 +592,14 @@ new class extends Component
 
         $gestion->update(['forma_pago' => 'Tesorería', 'estado_pago' => 'Pendiente de Tesorería']);
         History::create(['tramite_id' => $this->tramite->id, 'usuario_id' => $user->id, 'accion' => "Pago solicitado a Tesorería: S/ {$gestion->monto}"]);
+
+        $this->notificarRoles(
+            ['Tesorería'],
+            'Pago de compra pendiente',
+            "La compra del requerimiento {$this->tramite->tracking} está pendiente de pago por un monto de S/ ".number_format($gestion->monto, 2).'.',
+            'accion'
+        );
+
         session()->flash('status', 'Solicitud enviada a Tesorería.');
         $this->refrescar();
     }
@@ -522,8 +628,20 @@ new class extends Component
                 'nro_operacion' => $this->operacion_tesoreria,
             ]);
             $solicitud->update(['estado' => 'Atendida', 'fecha_atencion' => now()]);
-            $this->tramite->gestionLogistica?->update(['estado_pago' => 'Pagado por Tesorería', 'forma_pago' => 'Tesorería']);
+
+            if ($solicitud->origen === 'REQ-Reembolso') {
+                $this->tramite->gestionLogistica?->update(['requiere_reembolso' => false]);
+            } else {
+                $this->tramite->gestionLogistica?->update(['estado_pago' => 'Pagado por Tesorería', 'forma_pago' => 'Tesorería']);
+            }
+
             History::create(['tramite_id' => $this->tramite->id, 'usuario_id' => $user->id, 'accion' => 'Pago de compra atendido por Tesorería']);
+
+            $this->notificarRoles(
+                ['Logística'],
+                'Pago de compra atendido',
+                "Tesorería atendió el pago de la compra del requerimiento {$this->tramite->tracking}."
+            );
         });
 
         $this->comprobante_tesoreria = null;
@@ -1005,7 +1123,11 @@ new class extends Component
                     </form>
                 @elseif (auth()->user()->hasRole('Logística'))
                     <div class="flex flex-col gap-3">
-                        <flux:button size="sm" wire:click="marcarPagado">Marcar compra como pagada</flux:button>
+                        @if (session('error'))
+                            <flux:callout variant="danger" heading="{{ session('error') }}" />
+                        @endif
+                        <flux:button size="sm" wire:click="marcarPagado">Pagar con Caja Logística</flux:button>
+                        <flux:button size="sm" variant="ghost" wire:click="registrarPagoPersonal">Pago personal (a reembolsar)</flux:button>
                         <form wire:submit="solicitarPagoTesoreria" class="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-700">
                             <flux:input label="Motivo para Tesorería (opcional)" wire:model="motivo_tesoreria" />
                             <flux:button type="submit" size="sm">Solicitar pago a Tesorería</flux:button>
@@ -1153,10 +1275,11 @@ new class extends Component
                             <form wire:submit="regularizar({{ $regularizacion->id }})" class="mt-4 flex flex-col gap-3">
                                 <div class="flex items-center justify-between"><flux:label>Detalle de compra</flux:label><flux:button type="button" size="sm" icon="plus" wire:click="addDetalleRegularizacion">Agregar línea</flux:button></div>
                                 @foreach ($detalle_regularizacion as $index => $detalle)
-                                    <div class="grid gap-3 sm:grid-cols-3">
+                                    <div class="grid items-end gap-3 sm:grid-cols-4">
                                         <flux:input label="Descripción" wire:model="detalle_regularizacion.{{ $index }}.descripcion" />
                                         <flux:input type="number" step="0.01" label="Cantidad" wire:model="detalle_regularizacion.{{ $index }}.cantidad" />
                                         <flux:input type="number" step="0.01" label="Precio unitario" wire:model="detalle_regularizacion.{{ $index }}.precio_unitario" />
+                                        <flux:button type="button" size="sm" variant="ghost" icon="x-mark" wire:click="removeDetalleRegularizacion({{ $index }})">Quitar</flux:button>
                                     </div>
                                 @endforeach
                                 <div class="flex-1">
