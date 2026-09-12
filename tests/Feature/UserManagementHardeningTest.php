@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Admin\UserManagement;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
@@ -11,7 +12,7 @@ test('username must match the allowed charset', function () {
     $admin->assignRole('Sistemas');
     $this->actingAs($admin);
 
-    Livewire::test(\App\Livewire\Admin\UserManagement::class)
+    Livewire::test(UserManagement::class)
         ->set('name', 'Nuevo Usuario')
         ->set('username', 'usuario inválido!')
         ->set('email', 'nuevo@example.com')
@@ -31,7 +32,7 @@ test('resetting another users password forces a change on next login and rejects
 
     $this->actingAs($admin);
 
-    Livewire::test(\App\Livewire\Admin\UserManagement::class)
+    Livewire::test(UserManagement::class)
         ->call('edit', $target->id)
         ->set('password', 'OldPass#123')
         ->call('save')
@@ -39,7 +40,7 @@ test('resetting another users password forces a change on next login and rejects
 
     expect($target->fresh()->must_change_password)->toBeFalse();
 
-    Livewire::test(\App\Livewire\Admin\UserManagement::class)
+    Livewire::test(UserManagement::class)
         ->call('edit', $target->id)
         ->set('password', 'BrandNew#456')
         ->call('save')

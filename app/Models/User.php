@@ -3,15 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
     protected $fillable = [
         'name',
@@ -40,11 +41,12 @@ class User extends Authenticatable
             'active' => 'boolean',
         ];
     }
+
     public function initials(): string
     {
-        return \Illuminate\Support\Str::of($this->name)
+        return Str::of($this->name)
             ->explode(' ')
-            ->map(fn (string $name) => \Illuminate\Support\Str::substr($name, 0, 1))
+            ->map(fn (string $name) => Str::substr($name, 0, 1))
             ->implode('');
     }
 

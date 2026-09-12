@@ -27,11 +27,11 @@ class RoleSeeder extends Seeder
 
         // Asignar cada usuario a su rol según su cargo
         $map = [
-            'aMoreno'   => 'Gerencia de Obra',
-            'jBecerra'  => 'Control y Planeamiento',
-            'lNeyra'    => 'Gerencia General',
-            'sSanchez'  => 'Administración',
-            'rVasquez'  => 'Logística',
+            'aMoreno' => 'Gerencia de Obra',
+            'jBecerra' => 'Control y Planeamiento',
+            'lNeyra' => 'Gerencia General',
+            'sSanchez' => 'Administración',
+            'rVasquez' => 'Logística',
             'yCoronado' => 'Tesorería',
             'oGonzales' => 'Sistemas',
         ];

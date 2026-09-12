@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\User;
 use App\Models\Obra;
+use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -13,12 +13,19 @@ use Spatie\Permission\Models\Role;
 class UserManagement extends Component
 {
     public string $name = '';
+
     public string $username = '';
+
     public string $email = '';
+
     public string $cargo = '';
+
     public string $role = '';
+
     public string $password = '';
+
     public ?int $editingId = null;
+
     public array $obraIds = [];
 
     public function mount(): void

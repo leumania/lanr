@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\History;
 use App\Models\Reembolso;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -13,13 +12,21 @@ class Reimbursements extends Component
     use WithFileUploads;
 
     public string $tipo = 'Reembolso';
+
     public string $numero = '';
+
     public string $fecha = '';
+
     public string $concepto = '';
+
     public string $monto = '';
+
     public string $moneda = 'PEN';
+
     public string $observaciones = '';
+
     public array $archivos = [];
+
     public $evidenciaAtencion;
 
     public function mount(): void
@@ -38,7 +45,7 @@ class Reimbursements extends Component
         ]);
 
         $obraId = auth()->user()->obra_activa_id;
-        $numero = $this->numero ?: 'RR-' . substr($this->fecha, 0, 4) . '-' . str_pad((string) (Reembolso::where('obra_id', $obraId)->count() + 1), 3, '0', STR_PAD_LEFT);
+        $numero = $this->numero ?: 'RR-'.substr($this->fecha, 0, 4).'-'.str_pad((string) (Reembolso::where('obra_id', $obraId)->count() + 1), 3, '0', STR_PAD_LEFT);
 
         if (Reembolso::where('obra_id', $obraId)->where('numero', $numero)->exists()) {
             $this->addError('numero', "Ya existe un reembolso/rendición con el número {$numero} en esta obra.");

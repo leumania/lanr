@@ -132,7 +132,18 @@ class Tramite extends Model
         return $this->hasMany(CompraLogistica::class);
     }
 
-    public function spModalidades(): HasMany { return $this->hasMany(SpModalidad::class); }
-    public function spCuentas(): HasMany { return $this->hasMany(SpCuenta::class); }
-    public function spComprobantes(): HasMany { return $this->hasMany(SpComprobante::class); }
+    public function spModalidades(): HasMany
+    {
+        return $this->hasMany(SpModalidad::class);
+    }
+
+    public function spCuentas(): HasMany
+    {
+        return $this->hasMany(SpCuenta::class);
+    }
+
+    public function spComprobantes(): HasMany
+    {
+        return $this->hasMany(SpComprobante::class);
+    }
 }

@@ -1,6 +1,8 @@
 <?php
 
+use App\Livewire\Tramites\RequestList;
 use App\Models\GestionLogistica;
+use App\Models\Notificacion;
 use App\Models\Obra;
 use App\Models\SolicitudTesoreria;
 use App\Models\Tramite;
@@ -24,7 +26,7 @@ test('caja logistica bloqueada sobre el umbral y pago personal genera solicitud 
 
     $this->actingAs($logistica);
 
-    Livewire::test(\App\Livewire\Tramites\RequestList::class); // warm up nothing, just ensure roles ok
+    Livewire::test(RequestList::class); // warm up nothing, just ensure roles ok
 
     $component = Livewire::test('tramites.request-detail', ['tramite' => $tramite]);
     $component->call('marcarPagado');
@@ -47,5 +49,5 @@ test('caja logistica bloqueada sobre el umbral y pago personal genera solicitud 
         ->and($solicitud->estado)->toBe('Pendiente')
         ->and((float) $solicitud->monto)->toBe(500.0);
 
-    expect(\App\Models\Notificacion::where('usuario_id', $tesoreria->id)->count())->toBeGreaterThan(0);
+    expect(Notificacion::where('usuario_id', $tesoreria->id)->count())->toBeGreaterThan(0);
 });

@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Tramites;
 
-use App\Models\Approval;
 use App\Models\AutorizacionCompra;
 use App\Models\Cotizacion;
 use App\Models\CotizacionItem;
@@ -21,15 +20,25 @@ class Quotations extends Component
     use WithFileUploads;
 
     public Tramite $tramite;
+
     public string $proveedorNombre = '';
+
     public string $proveedorDocumento = '';
+
     public ?int $proveedorSeleccionado = null;
+
     public string $tipoSustento = 'Cotización';
+
     public string $fecha = '';
+
     public string $observacion = '';
+
     public array $items = [];
+
     public array $archivos = [];
+
     public array $seleccion = [];
+
     public string $motivoAnulacion = '';
 
     public function mount(Tramite $tramite): void
@@ -50,6 +59,7 @@ class Quotations extends Component
         $exists = Proveedor::whereRaw('lower(nombre) = ?', [mb_strtolower(trim($this->proveedorNombre))])->exists();
         if ($exists) {
             $this->addError('proveedorNombre', 'Ya existe un proveedor con ese nombre.');
+
             return;
         }
 
@@ -75,6 +85,7 @@ class Quotations extends Component
         abort_if($itemsValidos->isEmpty(), 422, 'La cotización debe incluir al menos un ítem con cantidad y precio.');
         if ($this->tipoSustento === 'Cotización' && count($this->archivos) === 0) {
             $this->addError('archivos', 'Adjunta el sustento de la cotización.');
+
             return;
         }
 
@@ -130,7 +141,9 @@ class Quotations extends Component
             foreach ($cotizaciones as $cotizacion) {
                 foreach ($cotizacion->items as $item) {
                     $cantidad = (float) ($seleccionados[$item->id] ?? 0);
-                    if ($cantidad <= 0) continue;
+                    if ($cantidad <= 0) {
+                        continue;
+                    }
                     abort_if($cantidad > (float) $item->cantidad, 422, 'La cantidad autorizada supera la cotizada.');
                     $autorizada = (float) $item->item->autorizaciones()
                         ->whereHas('autorizacion', fn ($query) => $query->where('estado', 'Autorizada'))
@@ -146,7 +159,7 @@ class Quotations extends Component
                 }
             }
             foreach ($totales as $proveedorId => $monto) {
-                $proveedor = \App\Models\Proveedor::find($proveedorId);
+                $proveedor = Proveedor::find($proveedorId);
                 SolicitudTesoreria::create([
                     'tramite_id' => $this->tramite->id,
                     'autorizacion_id' => $autorizacion->id,
@@ -192,7 +205,7 @@ class Quotations extends Component
             $autorizacion->update(['estado' => 'Anulada', 'motivo_anulacion' => $this->motivoAnulacion, 'anulada_fecha' => now()]);
             $autorizacion->solicitudesTesoreria()->where('estado', 'Pendiente')->update(['estado' => 'Anulado']);
             $this->tramite->update(['estado' => 'Cotizaciones en gestión']);
-            History::create(['tramite_id' => $this->tramite->id, 'usuario_id' => auth()->id(), 'accion' => 'Autorización de compra anulada: ' . $this->motivoAnulacion]);
+            History::create(['tramite_id' => $this->tramite->id, 'usuario_id' => auth()->id(), 'accion' => 'Autorización de compra anulada: '.$this->motivoAnulacion]);
         });
 
         $this->motivoAnulacion = '';

@@ -1,17 +1,20 @@
 <?php
 
-use App\Models\Tramite;
-use App\Models\Attachment;
+use App\Http\Controllers\TramiteSearchController;
 use App\Models\ArchivoLogistica;
+use App\Models\Attachment;
+use App\Models\CotizacionArchivo;
+use App\Models\Item;
+use App\Models\ItemImagen;
+use App\Models\Notificacion;
+use App\Models\OrdenAdjunto;
+use App\Models\PagoTesoreria;
 use App\Models\ReembolsoAdjunto;
 use App\Models\SpPagoMultiple;
-use App\Models\CotizacionArchivo;
-use App\Models\ItemImagen;
+use App\Models\Tramite;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Spatie\LaravelPdf\Facades\Pdf;
-use App\Http\Controllers\TramiteSearchController;
-
 
 Route::get('/', fn () => redirect()->route('login'))->name('home');
 
@@ -37,7 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('regularizaciones', 'admin.regularizations')->name('admin.regularizations');
     Route::get('api/tramites/search', TramiteSearchController::class)->name('tramites.search.api');
 
-    Route::get('notificaciones/{notificacion}/abrir', function (\App\Models\Notificacion $notificacion) {
+    Route::get('notificaciones/{notificacion}/abrir', function (Notificacion $notificacion) {
         abort_unless($notificacion->usuario_id === auth()->id(), 404);
 
         if (! $notificacion->leida) {
@@ -53,7 +56,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return view('admin.obras');
     })->name('admin.obras');
-    
+
     Route::get('tramites/{tramite}/cotizaciones', function (Tramite $tramite) {
         auth()->user()->can('view', $tramite) || abort(404);
         abort_unless($tramite->tipo === 'REQ', 404);
@@ -64,6 +67,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('tramites/{tramite}/pago-avanzado', function (Tramite $tramite) {
         auth()->user()->can('view', $tramite) || abort(404);
         abort_unless($tramite->tipo === 'SP', 404);
+
         return view('tramites.sp-advanced', compact('tramite'));
     })->name('tramites.sp-advanced');
 
@@ -121,43 +125,49 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Storage::disk('public')->response($attachment->nombre_archivo, $attachment->nombre_original);
     })->name('tramites.attachments.view');
 
-    Route::get('items/{item}/imagenes/{imagen}', function (\App\Models\Item $item, ItemImagen $imagen) {
+    Route::get('items/{item}/imagenes/{imagen}', function (Item $item, ItemImagen $imagen) {
         abort_unless($imagen->item_id === $item->id, 404);
         abort_unless(auth()->user()->can('view', $item->tramite), 404);
 
         return Storage::disk('public')->download($imagen->nombre_archivo, $imagen->nombre_original);
     })->name('items.images.download');
 
-    Route::get('ordenes-archivos/{archivo}/descargar', function (\App\Models\OrdenAdjunto $archivo) {
+    Route::get('ordenes-archivos/{archivo}/descargar', function (OrdenAdjunto $archivo) {
         abort_unless($archivo->orden->obra_id === auth()->user()->obra_activa_id, 404);
+
         return Storage::disk('public')->download($archivo->nombre_archivo, $archivo->nombre_original);
     })->name('orders.files.download');
 
     Route::get('archivos-logistica/{archivo}/descargar', function (ArchivoLogistica $archivo) {
         abort_unless(auth()->user()->can('view', $archivo->tramite), 404);
+
         return Storage::disk('public')->download($archivo->nombre_archivo, $archivo->nombre_original);
     })->name('logistica.files.download');
 
     Route::get('cotizaciones-archivos/{archivo}/descargar', function (CotizacionArchivo $archivo) {
         abort_unless(auth()->user()->can('view', $archivo->cotizacion->tramite), 404);
+
         return Storage::disk('public')->download($archivo->nombre_archivo, $archivo->nombre_original);
     })->name('quotations.files.download');
 
     Route::get('reembolsos-archivos/{archivo}/descargar', function (ReembolsoAdjunto $archivo) {
         abort_unless(auth()->user()->obra_activa_id === $archivo->reembolso->obra_id, 404);
+
         return Storage::disk('public')->download($archivo->nombre_archivo, $archivo->nombre_original);
     })->name('reimbursements.files.download');
 
     Route::get('sp-pagos/{pago}/descargar', function (SpPagoMultiple $pago) {
         abort_unless(auth()->user()->can('view', $pago->gestion->tramite), 404);
         abort_unless($pago->nombre_archivo, 404);
+
         return Storage::disk('public')->download($pago->nombre_archivo, $pago->nombre_original);
     })->name('sp.payments.download');
 
-    Route::get('pagos-tesoreria/{pago}/descargar', function (\App\Models\PagoTesoreria $pago) {
+    Route::get('pagos-tesoreria/{pago}/descargar', function (PagoTesoreria $pago) {
         abort_unless(auth()->user()->hasAnyRole(['Tesorería', 'Logística', 'Sistemas']), 404);
         abort_unless($pago->solicitud->tramite->obra_id === auth()->user()->obra_activa_id, 404);
         abort_unless($pago->nombre_archivo, 404);
+
         return Storage::disk('public')->download($pago->nombre_archivo, $pago->nombre_original);
     })->name('tesoreria.pagos.download');
 });

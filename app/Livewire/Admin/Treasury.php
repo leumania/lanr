@@ -17,12 +17,19 @@ class Treasury extends Component
     use WithFileUploads;
 
     public string $medio = 'Transferencia';
+
     public string $medioOtro = '';
+
     public string $banco = '';
+
     public string $operacion = '';
+
     public string $fecha = '';
+
     public string $monto = '';
+
     public array $comprobante = [];
+
     public $evidenciaReembolso;
 
     public function mount(): void
@@ -103,7 +110,7 @@ class Treasury extends Component
                 'usuario_id' => $solicitud->solicitado_por,
                 'tramite_id' => $solicitud->tramite_id,
                 'titulo' => 'Pago atendido por Tesorería',
-                'mensaje' => "Tesorería atendió tu solicitud de pago por S/ ".number_format($solicitud->monto, 2).'.',
+                'mensaje' => 'Tesorería atendió tu solicitud de pago por S/ '.number_format($solicitud->monto, 2).'.',
             ]);
         });
 
