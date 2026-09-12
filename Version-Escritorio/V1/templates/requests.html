@@ -1,0 +1,115 @@
+{% extends 'base.html' %} {% block title %} Trámites | LANR {% endblock %} {%
+block content %}
+
+<div class="pagehead">
+  <div>
+    <h1>Trámites</h1>
+    <p>Consulta requerimientos y solicitudes de pago.</p>
+  </div>
+</div>
+
+<div class="card tramite-search-card">
+  <div class="tramite-search-grid">
+    <div class="field">
+      <label for="tramiteTipo"> Tipo de trámite </label>
+
+      <select id="tramiteTipo">
+        <option value="">Todos</option>
+        <option value="REQ">Requerimiento</option>
+        <option value="SP">Solicitud de pago</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="requestSearch"> Buscar </label>
+
+      <div class="search-input-wrapper">
+        <i class="fa-solid fa-magnifying-glass"></i>
+
+        <input
+          id="requestSearch"
+          type="text"
+          placeholder="Escribe N°, código o parte del código..."
+          autocomplete="off"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>N°</th>
+          <th>Tipo</th>
+          <th>Fecha</th>
+          <th>Creado por</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+
+      <tbody id="requestsBody">
+        {% for t in requests %}
+
+        <tr
+          class="tramite-row"
+          data-tipo="{{ t.tipo }}"
+          data-codigo="{{ t.tracking|lower }}"
+          data-numero="{{ t.numero|string|lower }}"
+        >
+          <td>
+            <strong class="tracking-code"> {{ t.tracking }} </strong>
+          </td>
+
+          <td>{{ t.numero }}</td>
+
+          <td>
+            {% if t.tipo == 'REQ' %}
+
+            <span class="type-pill req">
+              <i class="fa-solid fa-box"></i>
+              Requerimiento
+            </span>
+
+            {% elif t.tipo == 'SP' %}
+
+            <span class="type-pill sp">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              Solicitud de pago
+            </span>
+
+            {% else %} {{ t.tipo }} {% endif %} {% if t.subtipo %}
+            <span class="muted"> · {{ t.subtipo }} </span>
+            {% endif %}
+          </td>
+
+          <td>{{ t.fecha }}</td>
+
+          <td>{{ t.creador_nombre }}</td>
+
+          <td>
+            <span class="pill"> {{ t.estado }} </span>
+          </td>
+
+          <td>
+            <a
+              class="btn small"
+              href="{{ url_for('request_detail', tid=t.id) }}"
+            >
+              <i class="fa-regular fa-eye"></i>
+              Ver
+            </a>
+          </td>
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

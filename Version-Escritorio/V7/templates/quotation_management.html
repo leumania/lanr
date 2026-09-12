@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Cotizaciones | LANR{% endblock %}
+{% block content %}
+<div class="qm-head">
+  <div><h1>Gestión de cotizaciones</h1><p>{{ t.tracking }} · {{ t.numero }}</p></div>
+  <a class="btn" href="{{ url_for('request_detail',tid=t.id) }}"><i class="fa-solid fa-arrow-left"></i> Volver al requerimiento</a>
+</div>
+
+<div class="card qm-summary">
+  <h3>Avance de compra por ítem</h3>
+  <div class="qm-progress-grid">
+  {% for i in items %}
+    {% set req = (i.comprar or 0)|float %}{% set auth = autorizado.get(i.id,0)|float %}{% set pend = [req-auth,0]|max %}
+    <div class="qm-progress-item"><strong>{{ i.descripcion }}</strong><span>{{ i.unidad }}</span><div><b>Requerido:</b> {{ '%.2f'|format(req) }} · <b>Autorizado:</b> {{ '%.2f'|format(auth) }} · <b>Pendiente:</b> {{ '%.2f'|format(pend) }}</div></div>
+  {% endfor %}
+  </div>
+</div>
+
+{% if user.role == 'Logística' %}
+<div class="card topgap">
+  <div class="qm-title-row"><div><h3>Nueva cotización</h3><p class="muted">Puede guardarla como borrador y enviarla a Sara cuando esté lista.</p></div><button type="button" class="btn" onclick="document.getElementById('providerBox').classList.toggle('hidden')"><i class="fa-solid fa-plus"></i> Nuevo proveedor</button></div>
+  <form id="providerBox" class="qm-provider-form hidden" method="post" action="{{ url_for('provider_create') }}"><input type="hidden" name="tid" value="{{ t.id }}"><div class="formgrid"><div class="field"><label>Nombre / razón social *</label><input name="nombre" required></div><div class="field"><label>RUC / DNI</label><input name="documento" maxlength="20" placeholder="Opcional"></div></div><button class="btn primary">Guardar proveedor</button></form>
+
+  <form method="post" enctype="multipart/form-data" action="{{ url_for('quotation_create',tid=t.id) }}" class="topgap">
+    <div class="formgrid">
+      <div class="field"><label>Proveedor *</label><select name="proveedor_id" required><option value="">Seleccione...</option>{% for p in proveedores %}<option value="{{ p.id }}">{{ p.nombre }}{% if p.documento %} · {{ p.documento }}{% endif %}</option>{% endfor %}</select></div>
+      <div class="field"><label>Tipo de sustento *</label><select name="tipo_sustento" id="supportType" required onchange="toggleQuotationFiles()"><option>Cotización</option><option>Proveedor habitual</option></select></div>
+      <div class="field"><label>Fecha *</label><input type="date" name="fecha" value="{{ fecha_hoy }}" required></div>
+      <div class="field" id="quotationFilesField"><label>PDF / imagen de cotización *</label><input type="file" name="archivos" id="quotationFiles" multiple accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+    </div>
+    <div class="field"><label>Observación / motivo</label><textarea name="observacion" rows="2" placeholder="Para proveedor habitual, explique brevemente por qué no se adjunta una nueva cotización."></textarea></div>
+    <h4 class="topgap">Productos incluidos</h4><p class="muted">Solo complete la cantidad y el precio de los productos que aparecen en esta cotización.</p>
+    <div class="qm-items-table-wrap"><table class="qm-table"><thead><tr><th>Producto</th><th>UND</th><th>A comprar</th><th>Cantidad cotizada</th><th>Precio unitario S/</th></tr></thead><tbody>
+    {% for i in items %}<tr><td>{{ i.descripcion }}<input type="hidden" name="item_id[]" value="{{ i.id }}"></td><td>{{ i.unidad }}</td><td>{{ i.comprar }}</td><td><input type="number" name="cantidad[]" step="0.01" min="0" placeholder="0"></td><td><input type="number" name="precio_unitario[]" step="0.01" min="0" placeholder="0.00"></td></tr>{% endfor %}
+    </tbody></table></div>
+    <button class="btn primary topgap"><i class="fa-solid fa-floppy-disk"></i> Guardar como borrador</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card topgap">
+  <h3>Cotizaciones registradas</h3>
+  {% if cotizaciones %}
+  {% for q in cotizaciones %}
+  <div class="qm-quote">
+    <div class="qm-quote-head"><div><strong>#{{ q.id }} · {{ q.proveedor_nombre }}</strong><span class="status {{ 'done' if q.estado=='Enviada a Sara' else '' }}">{{ q.estado }}</span><small>{{ q.tipo_sustento }} · {{ q.fecha }} · Total referencial S/ {{ '%.2f'|format(q.total or 0) }}</small></div>
+      {% if user.role=='Logística' and q.estado=='Borrador' %}<form method="post" action="{{ url_for('quotation_send',qid=q.id) }}"><button class="btn primary"><i class="fa-solid fa-paper-plane"></i> Enviar a Sara</button></form>{% endif %}
+    </div>
+    <div class="qm-mini-items">{% for qi in qitems if qi.cotizacion_id==q.id %}<span>{{ qi.descripcion }}: {{ qi.cantidad }} {{ qi.unidad }} × S/ {{ '%.2f'|format(qi.precio_unitario) }}</span>{% endfor %}</div>
+    {% for f in qfiles if f.cotizacion_id==q.id %}<a class="btn small" target="_blank" href="{{ url_for('quotation_file',fid=f.id) }}"><i class="fa-regular fa-file"></i> {{ f.nombre_original }}</a>{% endfor %}
+    {% if q.observacion %}<p class="muted">{{ q.observacion }}</p>{% endif %}
+  </div>
+  {% endfor %}{% else %}<div class="empty">Todavía no hay cotizaciones.</div>{% endif %}
+</div>
+
+{% if user.role in ['Administración','Sistemas'] %}
+<div class="card topgap">
+  <h3>Comparación y autorización</h3><p class="muted">Sara puede autorizar por partes. Solo se muestran cotizaciones que Rodrigo ya envió.</p>
+  {% set sent = qitems|selectattr('estado','equalto','Enviada a Sara')|list %}
+  {% if sent %}
+  <form method="post" action="{{ url_for('quotation_authorize',tid=t.id) }}">
+  <div class="qm-items-table-wrap"><table class="qm-table qm-compare"><thead><tr><th>Seleccionar</th><th>Producto</th><th>Proveedor</th><th>Cotizado</th><th>Precio</th><th>Cantidad a autorizar</th></tr></thead><tbody>
+  {% for qi in sent %}{% set item = items|selectattr('id','equalto',qi.item_id)|first %}{% set pending = [(item.comprar|float)-(autorizado.get(item.id,0)|float),0]|max %}
+  <tr><td><input type="checkbox" name="selection[]" value="{{ qi.cotizacion_id }}:{{ qi.item_id }}"></td><td>{{ qi.descripcion }}</td><td>{{ qi.proveedor_nombre }}</td><td>{{ qi.cantidad }} {{ qi.unidad }}</td><td>S/ {{ '%.2f'|format(qi.precio_unitario) }}</td><td><input type="number" name="qty_{{ qi.cotizacion_id }}_{{ qi.item_id }}" step="0.01" min="0" max="{{ [qi.cantidad,pending]|min }}" placeholder="Pend. {{ '%.2f'|format(pending) }}"></td></tr>
+  {% endfor %}</tbody></table></div>
+  {% if user.role=='Administración' %}<button class="btn primary topgap"><i class="fa-solid fa-check"></i> Autorizar selección</button>{% endif %}
+  </form>
+  {% else %}<div class="empty">No hay cotizaciones enviadas a Sara.</div>{% endif %}
+</div>
+{% endif %}
+
+<div class="card topgap"><h3>Autorizaciones y pagos</h3>
+{% if autorizaciones %}{% for a in autorizaciones %}<div class="qm-auth"><div><strong>Autorización #{{ a.id }}</strong> · {{ a.estado }} · {{ a.fecha }} · <b>S/ {{ '%.2f'|format(a.total or 0) }}</b><div class="qm-mini-items">{% for ai in aitems if ai.autorizacion_id==a.id %}<span>{{ ai.descripcion }} → {{ ai.proveedor_nombre }} · {{ ai.cantidad }} {{ ai.unidad }} · S/ {{ '%.2f'|format(ai.subtotal) }}</span>{% endfor %}</div>{% if a.motivo_anulacion %}<p class="muted">Motivo: {{ a.motivo_anulacion }}</p>{% endif %}</div>
+{% if user.role=='Administración' and a.estado=='Autorizada' %}<form method="post" action="{{ url_for('authorization_cancel',aid=a.id) }}" class="qm-cancel"><input name="motivo" required placeholder="Motivo de anulación"><button class="btn danger">Anular</button></form>{% endif %}</div>{% endfor %}{% else %}<div class="empty">Todavía no hay autorizaciones.</div>{% endif %}
+{% if pagos %}<div class="qm-payment-list">{% for p in pagos %}<div><span>{{ p.proveedor_nombre or '-' }}</span><strong>S/ {{ '%.2f'|format(p.monto or 0) }}</strong><span class="status {{ 'done' if p.estado=='Atendido' else '' }}">{{ p.estado }}</span>{% if user.role in ['Tesorería','Sistemas'] %}<a class="btn small" href="{{ url_for('treasury_detail',sid=p.id) }}">Ver pago</a>{% endif %}</div>{% endfor %}</div>{% endif %}
+</div>
+{% endblock %}

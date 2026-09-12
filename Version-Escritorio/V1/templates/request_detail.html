@@ -1,0 +1,1661 @@
+{% extends 'base.html' %} {% block title %} Detalle del trámite | LANR {%
+endblock %} {% block content %}
+<div class="pagehead">
+  <div>
+    <h1>{{ t.tracking }}</h1>
+
+    <p>
+      N° {{ t.numero }} · {% if t.tipo == 'REQ' %} Requerimiento de materiales
+      {% else %} Solicitud de pago {% endif %} {% if t.subtipo %} · {{ t.subtipo
+      }} {% endif %}
+    </p>
+  </div>
+
+  {% if t.tipo == 'REQ' %}
+
+  <div class="pdf-actions">
+    <a
+      class="btn"
+      href="{{ url_for('view_requirement_pdf', tid=t.id) }}"
+      target="_blank"
+    >
+      <i class="fa-regular fa-file-pdf"></i>
+      Visualizar PDF
+    </a>
+
+    <a
+      class="btn primary"
+      href="{{ url_for('download_requirement_pdf', tid=t.id) }}"
+    >
+      <i class="fa-solid fa-download"></i>
+      Descargar PDF
+    </a>
+  </div>
+
+  {% elif t.tipo == 'SP' %}
+
+  <div class="pdf-actions">
+    <a
+      class="btn"
+      href="{{ url_for('view_payment_request_pdf', tid=t.id) }}"
+      target="_blank"
+    >
+      <i class="fa-regular fa-file-pdf"></i>
+      Visualizar PDF
+    </a>
+
+    <a
+      class="btn primary"
+      href="{{ url_for('download_payment_request_pdf', tid=t.id) }}"
+    >
+      <i class="fa-solid fa-download"></i>
+      Descargar PDF
+    </a>
+  </div>
+
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="infogrid">
+    <div><span>Estado</span><strong>{{t.estado}}</strong></div>
+    <div><span>Creado por</span><strong>{{t.creador_nombre}}</strong></div>
+    <div><span>Fecha</span><strong>{{t.fecha}}</strong></div>
+    {% if t.formato %}
+    <div><span>Código formato</span><strong>{{t.formato}}</strong></div>
+    {% endif %}
+  </div>
+</div>
+
+{% if t.tipo == 'REQ' and user.username|lower == 'rvasquez' %}
+
+<div class="card topgap logistics-progress-card">
+  <div class="logistics-progress-head">
+    <div>
+      <h3>Seguimiento de Logística</h3>
+      <p class="muted">Gestiona el requerimiento según la etapa actual.</p>
+    </div>
+
+    <button type="button" class="btn" onclick="openReqModal()">
+      <i class="fa-regular fa-eye"></i>
+      Ver requerimiento
+    </button>
+  </div>
+
+  <div class="process-steps">
+    <div class="process-step done">
+      <span>1</span>
+      <div>
+        <strong>Aprobación</strong>
+        <small>2 V°B° completados</small>
+      </div>
+    </div>
+
+    <div
+      class="process-step {% if t.estado != 'Aprobado' %}done{% else %}current{% endif %}"
+    >
+      <span>2</span>
+      <div>
+        <strong>Recepción</strong>
+        <small>Logística</small>
+      </div>
+    </div>
+
+    <div
+      class="process-step {% if t.estado == 'Recibido por Logística' %}current {% elif t.estado in ['En gestión de compra','Enviado a obra','Cerrado'] %}done {% endif %}"
+    >
+      <span>3</span>
+      <div>
+        <strong>Compra</strong>
+        <small>Cotización / comprobante</small>
+      </div>
+    </div>
+
+    <div
+      class="process-step {% if t.estado == 'En gestión de compra' and gestion and not gestion.estado_pago %}current {% elif gestion and gestion.estado_pago in ['Pagado por Logística','Pagado por Tesorería'] %}done {% endif %}"
+    >
+      <span>4</span>
+      <div>
+        <strong>Pago</strong>
+        <small>Logística / Tesorería</small>
+      </div>
+    </div>
+
+    <div
+      class="process-step {% if gestion and gestion.estado_pago in ['Pagado por Logística','Pagado por Tesorería'] and t.estado != 'Enviado a obra' and t.estado != 'Cerrado' %}current {% elif t.estado in ['Enviado a obra','Cerrado'] %}done {% endif %}"
+    >
+      <span>5</span>
+      <div>
+        <strong>Despacho</strong>
+        <small>Guía y envío</small>
+      </div>
+    </div>
+
+    <div
+      class="process-step {% if t.estado == 'Enviado a obra' %}current {% elif t.estado == 'Cerrado' %}done {% endif %}"
+    >
+      <span>6</span>
+      <div>
+        <strong>Recepción obra</strong>
+        <small>Finalización</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %} {% if not (t.tipo == 'REQ' and user.username|lower in
+['rvasquez','ogonzales']) %}
+
+<div class="card topgap">
+  <h3>Vistos buenos / aprobaciones</h3>
+  <div class="approvalgrid">
+    {% for a in approvals %}
+    <div class="approval">
+      <strong>{{a.rol}}</strong>{% if a.aprobado %}<span class="ok"
+        >✓ APROBADO</span
+      ><small>{{a.nombre}}<br />{{a.fecha}}</small>{% else %}<span class="wait"
+        >Pendiente de V°B°</span
+      ><small>{{a.nombre}}</small>{% if a.usuario_id==user.id or
+      user.role=='Sistemas' %}
+      <form method="post" action='{{ url_for("approve",aid=a.id) }}'>
+        <button class="btn primary small">Dar visto bueno</button>
+      </form>
+      {% endif %}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card topgap">
+  <div class="card-title-row">
+    <div>
+      <h3>Detalle</h3>
+      <p class="muted">Vista resumida del trámite.</p>
+    </div>
+
+    {% if items|length > 3 %}
+    <button type="button" class="view-all" onclick="openDetailModal()">
+      Ver {{ items|length }} ítems
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
+    {% endif %}
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        {% if t.tipo == 'REQ' %}
+        <tr>
+          <th>Sección</th>
+          <th>Ítem</th>
+          <th>Descripción</th>
+          <th>Cant.</th>
+          <th>Und</th>
+          <th>Stock</th>
+          <th>A comprar</th>
+          <th>Justificación</th>
+        </tr>
+        {% else %}
+        <tr>
+          <th>Ítem</th>
+          <th>Concepto</th>
+          <th>Und</th>
+          <th>Cant.</th>
+          <th>Costo</th>
+          <th>Monto</th>
+        </tr>
+        {% endif %}
+      </thead>
+
+      <tbody>
+        {% for i in items[:3] %} {% if t.tipo == 'REQ' %}
+        <tr>
+          <td>{{ i.seccion }}</td>
+          <td>{{ i.nro }}</td>
+          <td>{{ i.descripcion }}</td>
+          <td>{{ i.cantidad }}</td>
+          <td>{{ i.unidad }}</td>
+          <td>{{ i.stock }}</td>
+          <td>{{ i.comprar }}</td>
+          <td>{{ i.justificacion }}</td>
+        </tr>
+
+        {% else %}
+        <tr>
+          <td>{{ i.nro }}</td>
+          <td>{{ i.descripcion }}</td>
+          <td>{{ i.unidad }}</td>
+          <td>{{ i.cantidad }}</td>
+          <td>S/ {{ "{:,.2f}".format(i.costo or 0) }}</td>
+          <td>S/ {{ "{:,.2f}".format(i.monto or 0) }}</td>
+        </tr>
+        {% endif %} {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %} {% if t.tipo == 'SP' %}
+
+<div class="card topgap">
+  <div class="attachments-header">
+    <div>
+      <h3>Documentos adjuntos</h3>
+      <p class="muted">Archivos registrados con esta solicitud.</p>
+    </div>
+
+    <span class="attachment-count">
+      {{ attachments|length }} archivo{% if attachments|length != 1 %}s{% endif
+      %}
+    </span>
+  </div>
+
+  {% if attachments %}
+
+  <div class="attachments-list">
+    {% for a in attachments %}
+
+    <div class="attachment-item">
+      <div class="attachment-info">
+        <div class="attachment-icon">
+          <i class="fa-regular fa-file-pdf"></i>
+        </div>
+
+        <div>
+          <strong>{{ a.nombre_original }}</strong>
+          <span>Documento PDF</span>
+        </div>
+      </div>
+
+      <div class="attachment-actions">
+        <a
+          class="btn small"
+          href="{{ url_for('view_attachment', aid=a.id) }}"
+          target="_blank"
+        >
+          <i class="fa-regular fa-eye"></i>
+          Ver
+        </a>
+
+        <a
+          class="btn small"
+          href="{{ url_for('download_attachment', aid=a.id) }}"
+        >
+          <i class="fa-solid fa-download"></i>
+          Descargar
+        </a>
+      </div>
+    </div>
+
+    {% endfor %}
+  </div>
+
+  {% else %}
+
+  <div class="attachments-empty">
+    <i class="fa-regular fa-folder-open"></i>
+    <span>No se adjuntaron documentos a esta solicitud.</span>
+  </div>
+
+  {% endif %}
+</div>
+
+{% endif %}
+
+<div
+  class="{% if t.tipo == 'REQ' and user.username|lower == 'rvasquez' %}twocol{% else %}history-full-layout{% endif %} topgap"
+>
+  <div>
+    {% if t.tipo == 'REQ' and user.username|lower == 'rvasquez' %} {% if
+    t.estado == 'Aprobado' %}
+
+    <div class="card stage-card">
+      <span class="stage-label">ETAPA ACTUAL</span>
+      <h3>Requerimiento listo para atender</h3>
+
+      <p class="muted">
+        El requerimiento cuenta con los dos vistos buenos. Confirma la recepción
+        para iniciar la gestión de compra.
+      </p>
+
+      <form method="post" action="{{ url_for('logistics_receive', tid=t.id) }}">
+        <button class="btn primary">
+          <i class="fa-solid fa-inbox"></i>
+          Recibir requerimiento
+        </button>
+      </form>
+    </div>
+
+    {% elif t.estado == 'Recibido por Logística' %}
+
+    <div class="card stage-card">
+      <span class="stage-label">ETAPA 3 DE 6</span>
+      <h3>Gestión de compra</h3>
+
+      <p class="muted">Registra la cotización y la compra realizada.</p>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for('logistics_purchase', tid=t.id) }}"
+      >
+        <div class="formgrid">
+          <div class="field">
+            <label>Fecha de compra *</label>
+
+            <input
+              type="date"
+              name="fecha_compra"
+              value="{{ fecha_hoy }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label>Tipo de comprobante *</label>
+
+            <select name="tipo_comprobante" required>
+              <option value="Factura" selected>Factura</option>
+              <option value="Boleta">Boleta</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>N° comprobante</label>
+
+            <input name="nro_comprobante" placeholder="Ej.: E001-169" />
+          </div>
+
+          <div class="field">
+            <label>Monto total *</label>
+
+            <input
+              name="monto"
+              type="text"
+              class="money-input"
+              inputmode="decimal"
+              required
+              placeholder="0.00"
+            />
+          </div>
+
+          <div class="field">
+            <label>Factura / comprobante</label>
+
+            <input
+              type="file"
+              name="comprobante"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.xml"
+              multiple
+            />
+
+            <small class="muted">
+              Puedes adjuntar el comprobante disponible actualmente. El
+              expediente podrá completarse posteriormente.
+            </small>
+          </div>
+
+          <div class="field">
+            <label>Regularización</label>
+
+            <label class="check-option">
+              <input
+                type="checkbox"
+                name="pendiente_regularizacion"
+                value="1"
+              />
+
+              <span> Pendiente de regularización </span>
+            </label>
+
+            <small class="muted">
+              Marca esta opción cuando la compra todavía deba completarse con
+              información o documentación definitiva.
+            </small>
+          </div>
+        </div>
+
+        <button class="btn primary topgap">
+          <i class="fa-solid fa-floppy-disk"></i>
+          Registrar compra
+        </button>
+      </form>
+    </div>
+
+    {% elif t.estado == 'En gestión de compra' and gestion and not
+    gestion.estado_pago %}
+
+    <div class="card stage-card">
+      <span class="stage-label">ETAPA 4 DE 6</span>
+      <h3>Gestión de pago</h3>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Proveedor</span>
+          <strong>{{ gestion.proveedor }}</strong>
+        </div>
+
+        <div>
+          <span>Comprobante</span>
+          <strong>{{ gestion.nro_comprobante or 'Pendiente' }}</strong>
+        </div>
+
+        <div>
+          <span>Monto</span>
+          <strong>S/ {{ '%.2f'|format(gestion.monto or 0) }}</strong>
+        </div>
+      </div>
+
+      {% if gestion.monto >= 1900 %}
+
+      <div class="flash danger topgap">
+        Este monto requiere gestión mediante Tesorería.
+      </div>
+
+      {% endif %}
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for('logistics_payment', tid=t.id) }}"
+      >
+        {% if gestion.monto < 1900 %}
+
+        <div class="field">
+          <label>¿Quién realizará el pago?</label>
+
+          <div class="field">
+            <label>Forma de pago</label>
+
+            <select name="forma_pago" required>
+              <option value="">Selecciona...</option>
+
+              <option value="Caja Logística">Caja de Logística</option>
+
+              <option value="Tesorería">Solicitar fondos a Tesorería</option>
+
+              <option value="Reembolso">
+                Pago personal / solicitar reembolso
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field topgap">
+          <label>Voucher / sustento de pago</label>
+
+          <input
+            type="file"
+            name="voucher"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+          />
+        </div>
+
+        {% else %}
+
+        <input type="hidden" name="forma_pago" value="Tesorería" />
+
+        {% endif %}
+
+        <button class="btn primary topgap">
+          {% if gestion.monto >= 1900 %}
+
+          <i class="fa-solid fa-paper-plane"></i>
+          Solicitar pago a Tesorería {% else %}
+
+          <i class="fa-solid fa-check"></i>
+          Continuar {% endif %}
+        </button>
+      </form>
+    </div>
+
+    {% elif gestion and gestion.estado_pago == 'Pendiente de Tesorería' %}
+
+    <div class="card stage-card">
+      <span class="stage-label">PAGO</span>
+
+      <h3>Pendiente de Tesorería</h3>
+
+      {% if user.username|lower == 'ycoronado' or user.username|lower ==
+      'ogonzales' %} {% set solicitud_pago = namespace(item=None) %} {% for
+      solicitud in tesoreria %} {% if solicitud.estado == 'Pendiente' and
+      solicitud.origen == 'REQ-Compra' and solicitud_pago.item == None %} {% set
+      solicitud_pago.item = solicitud %} {% endif %} {% endfor %} {% if
+      solicitud_pago.item %}
+
+      <div class="flash info">
+        <strong>Acción requerida:</strong>
+        revisa el expediente y registra el pago.
+      </div>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Requerimiento</span>
+          <strong>{{ t.tracking }}</strong>
+        </div>
+
+        <div>
+          <span>Monto solicitado</span>
+          <strong>
+            S/ {{ '%.2f'|format(solicitud_pago.item.monto or 0) }}
+          </strong>
+        </div>
+
+        <div>
+          <span>Motivo</span>
+          <strong> {{ solicitud_pago.item.motivo }} </strong>
+        </div>
+      </div>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for(
+        'treasury_pay',
+        sid=solicitud_pago.item.id
+      ) }}"
+      >
+        <div class="formgrid">
+          <div class="field">
+            <label> Medio de pago * </label>
+
+            <select name="medio_pago" required>
+              <option value="">Seleccione</option>
+
+              <option value="Transferencia">Transferencia</option>
+
+              <option value="Depósito">Depósito</option>
+
+              <option value="Efectivo">Efectivo</option>
+
+              <option value="Yape">Yape</option>
+
+              <option value="Plin">Plin</option>
+
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label> Banco </label>
+
+            <input type="text" name="banco" placeholder="Ej. BCP" />
+          </div>
+
+          <div class="field">
+            <label> Fecha del pago * </label>
+
+            <input
+              type="date"
+              name="fecha_pago"
+              value="{{ fecha_hoy }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> Monto pagado * </label>
+
+            <input
+              type="text"
+              name="monto"
+              class="money-input"
+              value="{{ '%.2f'|format(solicitud_pago.item.monto or 0) }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> N° operación / referencia </label>
+
+            <input type="text" name="nro_operacion" placeholder="Opcional" />
+          </div>
+
+          <div class="field">
+            <label> Comprobante de pago * </label>
+
+            <input
+              type="file"
+              name="comprobante_pago"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              required
+            />
+
+            <small class="muted"> Obligatorio para registrar el pago. </small>
+          </div>
+        </div>
+
+        <button type="submit" class="btn primary topgap">
+          <i class="fa-solid fa-check"></i>
+          Registrar pago
+        </button>
+      </form>
+
+      {% else %}
+
+      <p class="muted">No se encontró una solicitud de pago pendiente.</p>
+
+      {% endif %} {% else %}
+
+      <p class="muted">
+        La solicitud fue enviada a Tesorería. El proceso continuará cuando el
+        pago sea registrado.
+      </p>
+
+      <p>
+        Monto:
+        <strong> S/ {{ '%.2f'|format(gestion.monto or 0) }} </strong>
+      </p>
+
+      {% endif %}
+    </div>
+
+    {% elif gestion and gestion.estado_pago in [ 'Pagado por Logística', 'Pagado
+    por Tesorería' ] and t.estado != 'Enviado a obra' and t.estado != 'Cerrado'
+    %}
+
+    <div class="card stage-card">
+      <span class="stage-label">ETAPA 5 DE 6</span>
+      <h3>Despacho a obra</h3>
+
+      <div class="flash success">
+        Pago registrado:
+        <strong>{{ gestion.estado_pago }}</strong>
+      </div>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for('logistics_dispatch', tid=t.id) }}"
+      >
+        <div class="formgrid">
+          <div class="field">
+            <label>N° guía de remisión</label>
+            <input name="guia_numero" placeholder="Ingrese N° de guía" />
+          </div>
+
+          <div class="field">
+            <label>Fecha guía</label>
+            <input type="date" name="guia_fecha" />
+          </div>
+
+          <div class="field">
+            <label>Adjuntar guía</label>
+
+            <input
+              type="file"
+              name="guia"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.xml"
+            />
+          </div>
+
+          <div class="field">
+            <label>
+              <input type="checkbox" name="guia_pendiente" />
+              Guía pendiente de regularizar
+            </label>
+          </div>
+        </div>
+
+        <button class="btn primary topgap">
+          <i class="fa-solid fa-truck"></i>
+          Enviar a obra
+        </button>
+      </form>
+    </div>
+
+    {% elif t.estado == 'Enviado a obra' %}
+
+    <div class="card stage-card">
+      <span class="stage-label">DESPACHO COMPLETADO</span>
+
+      <h3>Materiales enviados a obra</h3>
+
+      <p class="muted">
+        Esperando confirmación de recepción por parte de obra.
+      </p>
+    </div>
+
+    {% elif t.estado == 'Cerrado' %}
+
+    <div class="card stage-card">
+      <span class="stage-label">FINALIZADO</span>
+
+      <h3>Requerimiento cerrado</h3>
+
+      <p class="muted">
+        Los materiales fueron recibidos correctamente en obra.
+      </p>
+    </div>
+
+    {% endif %} {% elif t.tipo == 'REQ' and user.username|lower in
+    ['amoreno','jbecerra','ogonzales'] and t.estado == 'Enviado a obra' %}
+
+    <div class="card">
+      <h3>Recepción en obra</h3>
+
+      <p class="muted">Confirma que los materiales llegaron correctamente.</p>
+
+      <form
+        method="post"
+        action="{{ url_for('update_request_status', tid=t.id) }}"
+      >
+        <input type="hidden" name="estado" value="Recibido en obra" />
+
+        <button class="btn primary">
+          <i class="fa-solid fa-check"></i>
+          Confirmar recepción en obra
+        </button>
+      </form>
+    </div>
+
+    {% elif t.tipo == 'SP' %} {% if gestion_sp and gestion_sp.pagado_por %}
+
+    <div class="card topgap">
+      <h3>
+        <i class="fa-solid fa-money-check-dollar"></i>
+        Pago registrado
+      </h3>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Medio de pago</span>
+          <strong> {{ gestion_sp.medio_pago or '-' }} </strong>
+        </div>
+
+        <div>
+          <span>Banco</span>
+          <strong> {{ gestion_sp.banco_pago or '-' }} </strong>
+        </div>
+
+        <div>
+          <span>Fecha</span>
+          <strong> {{ gestion_sp.fecha_pago or '-' }} </strong>
+        </div>
+
+        <div>
+          <span>Monto</span>
+          <strong>
+            S/ {{ '%.2f'|format(gestion_sp.monto_pagado or 0) }}
+          </strong>
+        </div>
+
+        <div>
+          <span>N° operación / referencia</span>
+          <strong> {{ gestion_sp.nro_operacion or '-' }} </strong>
+        </div>
+      </div>
+
+      {% if gestion_sp.nombre_archivo_pago %}
+
+      <div class="topgap">
+        <strong>Comprobante de pago</strong>
+
+        <div class="muted">{{ gestion_sp.nombre_original_pago }}</div>
+
+        <div class="topgap" style="display: flex; gap: 8px; flex-wrap: wrap">
+          <a
+            href="{{ url_for(
+        'view_sp_payment_receipt',
+        tid=t.id
+      ) }}"
+            target="_blank"
+            class="btn"
+          >
+            <i class="fa-solid fa-eye"></i>
+            Visualizar
+          </a>
+
+          <a
+            href="{{ url_for(
+        'download_sp_payment_receipt',
+        tid=t.id
+      ) }}"
+            class="btn"
+          >
+            <i class="fa-solid fa-download"></i>
+            Descargar
+          </a>
+        </div>
+      </div>
+
+      {% endif %}
+    </div>
+
+    {% endif %}
+
+    <div class="card">
+      <h3>Estado de la solicitud</h3>
+
+      {% if t.estado == 'Pendiente de aprobación' %}
+
+      <p class="muted">
+        La solicitud requiere los vistos buenos de Administración y Logística.
+      </p>
+
+      {% elif t.estado == 'Pendiente asignación de pago' %}
+
+      <p>
+        <strong> ✓ V°B° de oficina completados </strong>
+      </p>
+
+      <p class="muted">
+        La solicitud está pendiente de revisión por Gerencia General para
+        asignar quién realizará el pago.
+      </p>
+
+      {% if user.username|lower == 'lneyra' %}
+
+      <div class="topgap">
+        <p>
+          <strong> ¿Quién realizará el pago? </strong>
+        </p>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap">
+          <form
+            method="post"
+            action="{{ url_for(
+        'assign_sp_payment',
+        tid=t.id
+      ) }}"
+          >
+            <input type="hidden" name="asignado_pago" value="Tesorería" />
+
+            <button type="submit" class="btn primary">
+              <i class="fa-solid fa-building-columns"></i>
+              Asignar a Tesorería
+            </button>
+          </form>
+
+          <form
+            method="post"
+            action="{{ url_for(
+        'assign_sp_payment',
+        tid=t.id
+      ) }}"
+          >
+            <input
+              type="hidden"
+              name="asignado_pago"
+              value="Gerencia General"
+            />
+
+            <button type="submit" class="btn">
+              <i class="fa-solid fa-user-check"></i>
+              Lo pagaré yo
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {% endif %} {% elif t.estado == 'Asignada a Tesorería' %}
+
+      <p>
+        <strong> Pago asignado a Tesorería </strong>
+      </p>
+
+      <p class="muted">La solicitud está pendiente de pago por Tesorería.</p>
+
+      {% if user.username|lower == 'ycoronado' %}
+
+      <div class="flash info topgap">
+        <strong>Acción requerida:</strong>
+
+        revisa el expediente completo y registra el pago.
+      </div>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Solicitud</span>
+
+          <strong> {{ t.tracking }} </strong>
+        </div>
+
+        <div>
+          <span>Beneficiario</span>
+
+          <strong> {{ t.beneficiario }} </strong>
+        </div>
+
+        <div>
+          <span>Monto</span>
+
+          <strong> S/ {{ '%.2f'|format(t.abono or 0) }} </strong>
+        </div>
+      </div>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for(
+    'register_sp_payment',
+    tid=t.id
+  ) }}"
+      >
+        <div class="formgrid">
+          <div class="field">
+            <label> Medio de pago * </label>
+
+            <select name="medio_pago" required>
+              <option value="">Seleccione</option>
+
+              <option value="Transferencia">Transferencia</option>
+
+              <option value="Depósito">Depósito</option>
+
+              <option value="Efectivo">Efectivo</option>
+
+              <option value="Yape">Yape</option>
+
+              <option value="Plin">Plin</option>
+
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label> Banco </label>
+
+            <input type="text" name="banco_pago" placeholder="Ej. BCP" />
+          </div>
+
+          <div class="field">
+            <label> Fecha del pago * </label>
+
+            <input
+              type="date"
+              name="fecha_pago"
+              value="{{ fecha_hoy }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> Monto pagado * </label>
+
+            <input
+              type="text"
+              name="monto_pagado"
+              class="money-input"
+              value="{{ '%.2f'|format(t.abono or 0) }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> N° operación / referencia </label>
+
+            <input type="text" name="nro_operacion" placeholder="Opcional" />
+          </div>
+
+          <div class="field">
+            <label> Comprobante de pago * </label>
+
+            <input
+              type="file"
+              name="comprobante_pago"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              required
+            />
+
+            <small class="muted"> El comprobante es obligatorio. </small>
+          </div>
+        </div>
+
+        <button type="submit" class="btn primary topgap">
+          <i class="fa-solid fa-check"></i>
+
+          Registrar pago
+        </button>
+      </form>
+
+      {% endif %} {% elif t.estado == 'Asignada a Gerencia General' %}
+
+      <p>
+        <strong> Pago asignado a Gerencia General </strong>
+      </p>
+
+      <p class="muted">Gerencia General realizará el pago.</p>
+
+      {% if user.username|lower == 'lneyra' or user.username|lower ==
+      'ogonzales' %}
+
+      <div class="flash info topgap">
+        <strong>Acción requerida:</strong>
+
+        registra el pago y adjunta el comprobante.
+      </div>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Solicitud</span>
+
+          <strong> {{ t.tracking }} </strong>
+        </div>
+
+        <div>
+          <span>Beneficiario</span>
+
+          <strong> {{ t.beneficiario }} </strong>
+        </div>
+
+        <div>
+          <span>Monto</span>
+
+          <strong> S/ {{ '%.2f'|format(t.abono or 0) }} </strong>
+        </div>
+      </div>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for(
+    'register_sp_payment',
+    tid=t.id
+  ) }}"
+      >
+        <div class="formgrid">
+          <div class="field">
+            <label> Medio de pago * </label>
+
+            <select name="medio_pago" required>
+              <option value="">Seleccione</option>
+
+              <option value="Transferencia">Transferencia</option>
+
+              <option value="Depósito">Depósito</option>
+
+              <option value="Efectivo">Efectivo</option>
+
+              <option value="Yape">Yape</option>
+
+              <option value="Plin">Plin</option>
+
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label> Banco </label>
+
+            <input type="text" name="banco_pago" placeholder="Ej. BCP" />
+          </div>
+
+          <div class="field">
+            <label> Fecha del pago * </label>
+
+            <input
+              type="date"
+              name="fecha_pago"
+              value="{{ fecha_hoy }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> Monto pagado * </label>
+
+            <input
+              type="text"
+              name="monto_pagado"
+              class="money-input"
+              value="{{ '%.2f'|format(t.abono or 0) }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> N° operación / referencia </label>
+
+            <input type="text" name="nro_operacion" placeholder="Opcional" />
+          </div>
+
+          <div class="field">
+            <label> Comprobante de pago * </label>
+
+            <input
+              type="file"
+              name="comprobante_pago"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              required
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="btn primary topgap">
+          <i class="fa-solid fa-check"></i>
+
+          Registrar pago
+        </button>
+      </form>
+
+      {% endif %} {% elif t.estado == 'Pagada pendiente conformidad GG' %}
+
+      <p>
+        <strong> ✓ Pago registrado </strong>
+      </p>
+
+      <p class="muted">
+        La solicitud está pendiente de conformidad final de Gerencia General.
+      </p>
+
+      {% if user.username|lower == 'lneyra' or user.username|lower ==
+      'ogonzales' %}
+
+      <div class="topgap">
+        <div class="flash info">
+          <strong>Revisión final:</strong>
+
+          verifica el expediente y el comprobante de pago antes de finalizar la
+          solicitud.
+        </div>
+
+        <form
+          method="post"
+          action="{{ url_for(
+      'confirm_sp_payment',
+      tid=t.id
+    ) }}"
+          class="topgap"
+        >
+          <button
+            type="submit"
+            class="btn primary"
+            onclick="
+              return confirm(
+                '¿Confirmas que revisaste el pago y deseas finalizar esta solicitud?',
+              );
+            "
+          >
+            <i class="fa-solid fa-circle-check"></i>
+
+            Dar conformidad y finalizar
+          </button>
+        </form>
+      </div>
+
+      {% endif %} {% elif t.estado == 'Finalizada' %}
+
+      <p>
+        <strong> ✓ Solicitud finalizada </strong>
+      </p>
+
+      {% if gestion_sp and gestion_sp.conformidad_gg %}
+
+      <p class="muted">
+        Pago registrado y revisado por Gerencia General. {% if
+        gestion_sp.fecha_conformidad %}
+
+        <br />
+
+        Conformidad: {{ gestion_sp.fecha_conformidad }} {% endif %}
+      </p>
+
+      {% endif %} {% else %}
+
+      <p>{{ t.estado }}</p>
+
+      {% endif %}
+    </div>
+
+    {% endif %}
+  </div>
+
+  <!-- ==========================================
+       REEMBOLSO PENDIENTE - TESORERÍA
+  =========================================== -->
+
+  {% if t.tipo == 'REQ' and ( user.username|lower == 'ycoronado' or
+  user.username|lower == 'ogonzales' ) %} {% set solicitud_reembolso =
+  namespace(item=None) %} {% for solicitud in tesoreria %} {% if
+  solicitud.estado == 'Pendiente' and solicitud.origen == 'REQ-Reembolso' and
+  solicitud_reembolso.item == None %} {% set solicitud_reembolso.item =
+  solicitud %} {% endif %} {% endfor %} {% if solicitud_reembolso.item %}
+
+  <div class="card stage-card">
+    <span class="stage-label"> TESORERÍA </span>
+
+    <h3>Reembolso pendiente</h3>
+
+    <div class="flash info">
+      <strong>Acción requerida:</strong>
+      Logística realizó una compra con dinero personal. Debes registrar el
+      reembolso.
+    </div>
+
+    <div class="purchase-summary">
+      <div>
+        <span>Requerimiento</span>
+
+        <strong> {{ t.tracking }} </strong>
+      </div>
+
+      <div>
+        <span>Monto a reembolsar</span>
+
+        <strong>
+          S/ {{ '%.2f'|format( solicitud_reembolso.item.monto or 0 ) }}
+        </strong>
+      </div>
+
+      <div>
+        <span>Motivo</span>
+
+        <strong> {{ solicitud_reembolso.item.motivo }} </strong>
+      </div>
+    </div>
+
+    <form
+      method="post"
+      enctype="multipart/form-data"
+      action="{{ url_for(
+          'treasury_pay',
+          sid=solicitud_reembolso.item.id
+        ) }}"
+    >
+      <div class="formgrid">
+        <div class="field">
+          <label> Medio de pago * </label>
+
+          <select name="medio_pago" required>
+            <option value="">Seleccione</option>
+
+            <option value="Transferencia">Transferencia</option>
+
+            <option value="Depósito">Depósito</option>
+
+            <option value="Efectivo">Efectivo</option>
+
+            <option value="Yape">Yape</option>
+
+            <option value="Plin">Plin</option>
+
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label> Banco </label>
+
+          <input type="text" name="banco" placeholder="Ej. BCP" />
+        </div>
+
+        <div class="field">
+          <label> Fecha del reembolso * </label>
+
+          <input
+            type="date"
+            name="fecha_pago"
+            value="{{ fecha_hoy }}"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label> Monto reembolsado * </label>
+
+          <input
+            type="text"
+            name="monto"
+            class="money-input"
+            value="{{ '%.2f'|format(
+                solicitud_reembolso.item.monto or 0
+              ) }}"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label> N° operación / referencia </label>
+
+          <input type="text" name="nro_operacion" placeholder="Opcional" />
+        </div>
+
+        <div class="field">
+          <label> Comprobante del reembolso * </label>
+
+          <input
+            type="file"
+            name="comprobante_pago"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            required
+          />
+
+          <small class="muted">
+            Debes adjuntar el comprobante antes de registrar el reembolso.
+          </small>
+        </div>
+      </div>
+
+      <button type="submit" class="btn primary topgap">
+        <i class="fa-solid fa-check"></i>
+
+        Registrar reembolso
+      </button>
+    </form>
+  </div>
+
+  {% endif %} {% endif %} {% if t.tipo == 'REQ' and regularizaciones %}
+
+  <div class="card">
+    <h3>
+      <i class="fa-solid fa-list-check"></i>
+      Regularizaciones
+    </h3>
+
+    <p class="muted">
+      Documentos o información que deben completarse posteriormente.
+    </p>
+
+    {% for r in regularizaciones %}
+
+    <div class="history">
+      <span> {{ r.fecha_creacion }} </span>
+
+      <strong> {{ r.tipo }} </strong>
+
+      · {{ r.descripcion }}
+
+      <div class="muted">
+        Responsable: {{ r.responsable_nombre or 'Sin asignar' }}
+      </div>
+
+      {% if r.estado == 'Pendiente' %}
+
+      <span class="badge warning"> Pendiente </span>
+
+      {% if user.id == r.responsable_id %}
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for(
+    'regularize',
+    rid=r.id
+  ) }}"
+        class="topgap"
+      >
+        <div class="field">
+          <label> Adjuntar documento </label>
+
+          <input
+            type="file"
+            name="archivo_regularizacion"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.xml"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn primary topgap">
+          <i class="fa-solid fa-check"></i>
+
+          Regularizar
+        </button>
+      </form>
+
+      {% endif %} {% else %}
+
+      <span class="badge success"> Regularizado </span>
+
+      {% if r.fecha_regularizacion %}
+
+      <div class="muted">Regularizado: {{ r.fecha_regularizacion }}</div>
+
+      {% endif %} {% endif %}
+    </div>
+
+    {% endfor %}
+  </div>
+
+  {% endif %} {% if t.tipo == 'REQ' %}
+
+  <div class="card topgap">
+    <div class="attachments-header">
+      <div>
+        <h3>
+          <i class="fa-solid fa-folder-open"></i>
+          Documentos del expediente
+        </h3>
+
+        <p class="muted">
+          Documentos registrados durante la atención del requerimiento.
+        </p>
+      </div>
+
+      <span class="attachment-count">
+        {{ archivos_logistica|length }} archivo{% if archivos_logistica|length
+        != 1 %}s{% endif %}
+      </span>
+    </div>
+
+    {% if archivos_logistica %}
+
+    <div class="attachments-list">
+      {% for a in archivos_logistica %}
+
+      <div class="attachment-item">
+        <div class="attachment-info">
+          <div class="attachment-icon">
+            <i class="fa-regular fa-file"></i>
+          </div>
+
+          <div>
+            <strong> {{ a.nombre_original }} </strong>
+
+            <div class="muted">{{ a.tipo|replace('_', ' ')|title }}</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <a
+            href="{{ url_for(
+            'view_logistics_file',
+            aid=a.id
+          ) }}"
+            target="_blank"
+            class="btn"
+          >
+            <i class="fa-solid fa-eye"></i>
+            Visualizar
+          </a>
+
+          <a
+            href="{{ url_for(
+            'download_logistics_file',
+            aid=a.id
+          ) }}"
+            class="btn"
+          >
+            <i class="fa-solid fa-download"></i>
+            Descargar
+          </a>
+        </div>
+      </div>
+
+      {% endfor %}
+    </div>
+
+    {% else %}
+
+    <div class="attachments-empty">
+      <i class="fa-regular fa-folder-open"></i>
+
+      <span> Aún no hay documentos adicionales registrados. </span>
+    </div>
+
+    {% endif %}
+  </div>
+
+  {% endif %}
+
+  <div class="card">
+    <h3>Historial</h3>
+
+    {% for h in history %}
+
+    <div class="history">
+      <span>{{ h.fecha }}</span>
+      <strong>{{ h.nombre }}</strong>
+      · {{ h.accion }}
+    </div>
+
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL DE DETALLE COMPLETO
+=========================================== -->
+
+<div id="detailModal" class="modal-overlay hidden">
+  <div class="modal-window detail-modal-window">
+    <div class="modal-head">
+      <div>
+        <h3>Detalle completo</h3>
+
+        <p>{{ t.tracking }} · N° {{ t.numero }}</p>
+      </div>
+
+      <button type="button" class="modal-close" onclick="closeDetailModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="tablewrap modal-detail-table">
+      <table>
+        <thead>
+          {% if t.tipo == 'REQ' %}
+
+          <tr>
+            <th>Sección</th>
+            <th>Ítem</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Stock</th>
+            <th>A comprar</th>
+            <th>Justificación</th>
+          </tr>
+
+          {% else %}
+
+          <tr>
+            <th>Ítem</th>
+            <th>Concepto</th>
+            <th>Unidad</th>
+            <th>Cantidad</th>
+            <th>Costo unitario</th>
+            <th>Monto</th>
+          </tr>
+
+          {% endif %}
+        </thead>
+
+        <tbody>
+          {% for i in items %} {% if t.tipo == 'REQ' %}
+
+          <tr>
+            <td>{{ i.seccion }}</td>
+            <td>{{ i.nro }}</td>
+            <td>{{ i.descripcion }}</td>
+            <td>{{ i.cantidad }}</td>
+            <td>{{ i.unidad }}</td>
+            <td>{{ i.stock }}</td>
+            <td>{{ i.comprar }}</td>
+            <td>{{ i.justificacion }}</td>
+          </tr>
+
+          {% else %}
+
+          <tr>
+            <td>{{ i.nro }}</td>
+            <td>{{ i.descripcion }}</td>
+            <td>{{ i.unidad }}</td>
+            <td>{{ i.cantidad }}</td>
+            <td>S/ {{ "{:,.2f}".format(i.costo or 0) }}</td>
+            <td>S/ {{ "{:,.2f}".format(i.monto or 0) }}</td>
+          </tr>
+
+          {% endif %} {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn primary" onclick="closeDetailModal()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+{% if t.tipo == 'REQ' %}
+
+<div id="reqModal" class="modal-overlay hidden">
+  <div class="modal-window req-modal-window">
+    <div class="modal-head">
+      <div>
+        <h3>Detalle del requerimiento</h3>
+        <p>{{ t.tracking }} · N° {{ t.numero }}</p>
+      </div>
+
+      <button type="button" class="modal-close" onclick="closeReqModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sección</th>
+            <th>Ítem</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Stock</th>
+            <th>A comprar</th>
+            <th>Justificación</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for i in items %}
+
+          <tr>
+            <td>{{ i.seccion }}</td>
+            <td>{{ i.nro }}</td>
+            <td>{{ i.descripcion }}</td>
+            <td>{{ i.cantidad }}</td>
+            <td>{{ i.unidad }}</td>
+            <td>{{ i.stock }}</td>
+            <td>{{ i.comprar }}</td>
+            <td>{{ i.justificacion }}</td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-actions">
+      <a
+        class="btn"
+        href="{{ url_for('view_requirement_pdf', tid=t.id) }}"
+        target="_blank"
+      >
+        <i class="fa-regular fa-file-pdf"></i>
+        Visualizar PDF
+      </a>
+
+      <button type="button" class="btn primary" onclick="closeReqModal()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endif %} {% endblock %}

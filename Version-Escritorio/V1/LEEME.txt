@@ -1,0 +1,51 @@
+LANR - SISTEMA LOCAL V1
+
+CÓMO EJECUTAR
+1. Instala Python 3.11 o superior.
+2. Abre esta carpeta en Visual Studio Code.
+3. Terminal > Nueva terminal.
+4. Ejecuta:
+   python -m pip install -r requirements.txt
+5. Luego:
+   python app.py
+6. Abre:
+   http://127.0.0.1:5000
+
+USUARIOS INICIALES
+- aMoreno / obra2026
+- jBecerra / obra2026
+- lNeyra / obra2026
+- sSanchez / obra2026
+- rVasquez / obra2026
+- yCoronado / obra2026
+- oGonzales / obra2026
+
+El login no distingue mayúsculas/minúsculas.
+La primera vez obliga a cambiar la contraseña temporal.
+
+ESTA V1 LOCAL YA TIENE
+- Login real con SQLite
+- 7 usuarios y roles
+- Perfil y cambio de contraseña
+- home con métricas
+- Requerimiento de materiales
+- Secciones Ejecución de Obra / Ing. de Seguridad
+- Cantidad a comprar automática
+- Código F01A-LANR-XX
+- Código REQ-LAVEGA-AAAA-XXX / SP-LAVEGA-AAAA-XXX
+- Solicitud de Pago: Planilla o Persona/Empresa
+- Vistos buenos del requerimiento
+- Aprobaciones de solicitud
+- Estados básicos
+- Historial
+- Recepción en obra por Artidoro o José Luis
+- Administración básica de usuarios para Sistemas
+
+PENDIENTE PARA SIGUIENTES ITERACIONES
+- PDF idéntico a los formatos reales
+- Adjuntos y evidencias
+- Módulo completo de Logística
+- Facturas / XML
+- Bancarización
+- Tesorería y Administración completas
+- Correo y notificaciones reales

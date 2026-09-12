@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% block body_class %}page-edit-request page-requirement-form{% endblock %}
+{% block title %}Modificar trámite | LANR{% endblock %}
+
+{% block content %}
+{% if t.tipo == 'SP' %}
+{% set sp_year = (t.numero.split('-')[0] if '-' in t.numero else t.fecha[:4]) %}
+{% set sp_sequence = (t.numero.split('-')[-1] if '-' in t.numero else t.numero) %}
+<div class="lanr-create-shell">
+  <div class="lanr-create-head">
+    <div><a class="lanr-back-link" href="{{ url_for('request_detail',tid=t.id) }}"><i class="fa-solid fa-arrow-left"></i> Volver al trámite</a><h1>Modificar solicitud de pago</h1><p>Modifique la información necesaria. La solicitud seguirá en su revisión hasta que dé su V.°B.°.</p></div>
+  </div>
+  <form id="spV4Form" class="card tramite-form" method="post" enctype="multipart/form-data">
+    <div class="form-section-header"><div class="section-heading-icon sp-icon"><i class="fa-regular fa-credit-card"></i></div><div><h2>Datos de la solicitud</h2><p>Modifique únicamente la información que necesite. Los campos opcionales vacíos no se mostrarán en el PDF.</p></div></div>
+    <div class="form-section"><div class="formgrid">
+      <div class="field"><label>Tipo de solicitud <span class="required">*</span></label><select name="subtipo" required>{% for x in ['Proveedor persona natural','Proveedor persona jurídica','Cuarta categoría / Recibo por Honorarios','Planillas'] %}<option value="{{x}}" {% if t.subtipo==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></div>
+      <div class="field"><label>N° <span class="required">*</span></label><div class="lanr-number-composer"><span class="lanr-year-fixed">{{ sp_year }}</span><span class="lanr-number-fixed">-</span><input type="number" min="1" step="1" name="numero_correlativo" value="{{ sp_sequence }}" required placeholder="N°"></div><input type="hidden" name="numero" value="{{ t.numero }}"></div>
+      <div class="field"><label>Fecha <span class="required">*</span></label><input type="date" name="fecha" value="{{ t.fecha }}" required></div>
+      <div class="field"><label>Moneda <span class="required">*</span></label><select name="moneda" id="spV4Currency"><option value="PEN" {% if t.moneda!='USD' %}selected{% endif %}>Soles (S/)</option><option value="USD" {% if t.moneda=='USD' %}selected{% endif %}>Dólares (US$)</option></select></div>
+      <div class="field field-span-2"><label>Beneficiario <span class="required">*</span></label><input name="beneficiario" value="{{ t.beneficiario or '' }}" required placeholder="Nombre, apellidos o razón social"></div>
+      <div class="field"><label>DNI / RUC</label><input name="dni_ruc" value="{{ t.dni_ruc or '' }}" placeholder="Opcional"></div>
+      <div class="field"><label>Responsable</label><input name="responsable" value="{{ t.responsable or '' }}" placeholder="Opcional"></div>
+      <div class="field"><label>N° celular</label><input name="celular" value="{{ t.celular or '' }}" inputmode="numeric" pattern="[0-9]*" placeholder="Opcional"></div>
+      <div class="field"><label>Fecha límite de pago</label><input type="date" name="fecha_limite_pago" value="{{ t.fecha_limite_pago or '' }}"><small class="field-help">Opcional. Útil para pagos programados o con vencimiento.</small></div>
+    </div></div>
+
+    {% set current_modes = sp_modalidades|map(attribute='modalidad')|list %}
+    <div class="form-section"><div class="form-section-title"><span>Modalidad de pago</span><small>Opcional.</small></div><div class="lanr-check-grid">{% for x in ['Transferencia','Depósito','En efectivo','Transferencias varias'] %}<label class="lanr-check"><input type="checkbox" name="modalidad_pago[]" value="{{x}}" {% if x in current_modes %}checked{% endif %}><span>{{x}}</span></label>{% endfor %}<label class="lanr-check"><input type="checkbox" name="modalidad_pago[]" value="Otro" id="spV4OtherModeCheck"><span>Otro</span></label></div><div class="field hidden" id="spV4OtherModeWrap"><label>Otra modalidad</label><input name="modalidad_otro"></div></div>
+
+    <div class="form-section"><div class="form-section-title"><span>Banco y cuenta / CCI</span></div><div id="spV4Accounts">{% for a in sp_cuentas %}<div class="spv4-account-row"><div class="field"><label>Banco</label><select name="banco[]"><option value="{{a.banco}}" selected>{{a.banco}}</option><option>Banco de la Nación</option><option>BBVA</option><option>BCP</option><option>Caja Trujillo</option><option>Otro</option></select><input class="spv4-other-bank hidden" name="banco_otro[]"></div><div class="field"><label>Cuenta / CCI</label><input name="cuenta_cci[]" value="{{a.cuenta_cci or ''}}"></div><button type="button" class="iconbtn danger spv4-row-delete" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash"></i></button></div>{% endfor %}</div><button type="button" class="btn" onclick="spv4AddAccount()"><i class="fa-solid fa-plus"></i> Agregar banco / cuenta</button></div>
+
+    <div class="subsection"><h3>Detalle</h3><div class="table-responsive"><table class="nt-table"><thead><tr><th>N°</th><th>Concepto</th><th>Unidad</th><th>Cantidad</th><th>Costo unit.</th><th>Monto</th><th>Detalles</th><th></th></tr></thead><tbody id="spV4Items">{% for i in items %}<tr><td class="spv4-index">{{loop.index}}</td><td><input name="concepto[]" value="{{i.descripcion}}" required></td><td><select name="unidad_sp[]" required>{% for u in sp_units %}<option value="{{u}}" {% if i.unidad==u %}selected{% endif %}>{{u}}</option>{% endfor %}</select></td><td><input type="number" step="0.01" name="cantidad_sp[]" value="{{i.cantidad}}" required oninput="spv4Recalc()"></td><td><input type="number" min="0" step="0.01" name="costo[]" value="{{i.costo}}" required oninput="spv4Recalc()"></td><td class="spv4-amount">{{ '%.2f'|format(i.monto or 0) }}</td><td><button type="button" class="btn small" onclick="this.closest('tr').querySelector('.spv4-dispatch').classList.toggle('hidden')">Detalles</button><div class="spv4-dispatch {% if not i.nro_despacho %}hidden{% endif %}"><input name="nro_despacho[]" value="{{i.nro_despacho or ''}}" placeholder="N° despacho (opcional)"></div></td><td><button type="button" class="iconbtn danger" onclick="this.closest('tr').remove();spv4Renumber();spv4Recalc()"><i class="fa-solid fa-trash"></i></button></td></tr>{% endfor %}</tbody></table></div><button type="button" class="btn topgap" onclick="spv4AddItem()"><i class="fa-solid fa-plus"></i> Agregar ítem</button><div class="purchase-total-box"><span>Total</span><strong id="spV4Total">0.00</strong></div></div>
+
+    <div class="form-section"><label class="lanr-switch-line"><input type="checkbox" id="spV4AmortToggle" onchange="spv4ToggleAmortization()" {% if t.amortizacion and t.amortizacion>0 %}checked{% endif %}><span>Registrar Solicitud de Pago (amortización)</span></label><input type="hidden" name="usar_amortizacion" id="spV4AmortFlag" value="{{ '1' if t.amortizacion and t.amortizacion>0 else '0' }}"><div id="spV4AmortBox" class="{% if not t.amortizacion or t.amortizacion<=0 %}hidden{% endif %} formgrid"><div class="field"><label>Monto de amortización</label><input type="number" step="0.01" min="0" name="amortizacion" id="spV4Amort" value="{{ t.amortizacion or '' }}" oninput="spv4Recalc()"></div><div class="field"><label>Saldo pendiente</label><input id="spV4Balance" readonly value="{{ t.saldo_pendiente or '' }}"></div></div></div>
+
+    <div class="form-section"><h3>Comprobantes actuales</h3>{% if sp_comprobantes %}<div class="edit-attachments-list">{% for cp in sp_comprobantes %}<div class="edit-attachment-item"><div class="edit-attachment-info"><i class="fa-regular fa-file-lines"></i><div><strong>{{cp.tipo or 'Comprobante'}}{% if cp.numero %} · {{cp.numero}}{% endif %}</strong><span>{{cp.nombre_original or 'Sin archivo'}}</span></div></div><label class="edit-attachment-delete"><input type="checkbox" name="eliminar_comprobantes[]" value="{{cp.id}}"><span>Eliminar</span></label></div>{% endfor %}</div>{% endif %}<div id="spV4Receipts"></div><button type="button" class="btn topgap" onclick="spv4AddReceipt()"><i class="fa-solid fa-plus"></i> Agregar comprobante</button></div>
+
+    <div class="form-section"><div class="field"><label>Observaciones</label><textarea name="observaciones">{{t.observaciones or ''}}</textarea></div></div>
+    <div class="form-section"><h3>Otros documentos</h3>{% if attachments %}<div class="edit-attachments-list">{% for a in attachments %}<div class="edit-attachment-item"><div class="edit-attachment-info"><i class="fa-regular fa-file-pdf"></i><strong>{{a.nombre_original}}</strong></div><label class="edit-attachment-delete"><input type="checkbox" name="eliminar_adjuntos[]" value="{{a.id}}"><span>Eliminar</span></label></div>{% endfor %}</div>{% endif %}<div class="field"><label>Agregar PDF</label><input type="file" name="documentos" multiple accept=".pdf"></div></div>
+    <div class="form-actions"><a class="btn" href="{{url_for('request_detail',tid=t.id)}}">Cancelar</a><button class="btn primary"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button></div>
+  </form>
+  <div id="requestUnitData" hidden data-req-units='[]' data-sp-units='{{ sp_units|tojson }}'></div>
+</div>
+{% else %}
+{% set req_year = (t.numero.split('-')[-1] if '-' in t.numero else t.fecha[:4]) %}
+{% set req_sequence = (t.numero.split('-')[0] if '-' in t.numero else t.numero) %}
+{% set exec_items = items|selectattr('seccion', 'equalto', 'Ejecución de obra')|list %}
+{% set safety_items = items|selectattr('seccion', 'equalto', 'Seguridad en obra')|list %}
+{% set office_items = items|selectattr('seccion', 'equalto', 'Útiles de oficina')|list %}
+<div class="lanr-create-shell">
+  <div class="lanr-create-head">
+    <div>
+      <a class="lanr-back-link" href="{{ url_for('request_detail', tid=t.id) }}"><i class="fa-solid fa-arrow-left"></i> Volver al trámite</a>
+      <h1>Modificar requerimiento de materiales</h1>
+      <p>Modifique la información necesaria. El requerimiento seguirá en su revisión hasta que dé su V.°B.°.</p>
+    </div>
+  </div>
+
+  <form id="editReqForm" class="lanr-create-card" method="post" enctype="multipart/form-data">
+    <section class="lanr-create-section">
+      <div class="lanr-section-label">Datos generales</div>
+      <div class="lanr-general-grid">
+        <div class="field">
+          <label>N° de requerimiento <span class="required">*</span></label>
+          <div class="lanr-number-composer">
+            <input type="number" min="1" step="1" name="numero_correlativo" id="editReqSequence" required value="{{ req_sequence }}" placeholder="Ingrese número de requerimiento" inputmode="numeric" />
+            <span class="lanr-number-fixed">-</span>
+            <span class="lanr-year-fixed">{{ req_year }}</span>
+          </div>
+          <input type="hidden" name="numero" id="editReqFullNumber" value="{{ t.numero }}" />
+        </div>
+        <div class="field">
+          <label>Fecha <span class="required">*</span></label>
+          <input type="date" name="fecha" id="editReqDate" value="{{ t.fecha }}" required />
+        </div>
+      </div>
+    </section>
+
+    <section class="lanr-create-section lanr-type-section">
+      <div class="lanr-section-label">Tipo de requerimiento</div>
+      <div class="req-options req-options-ref">
+        {% if user.role not in ['Administración','Logística','Tesorería','Sistemas'] %}
+        <label class="req-check req-check-ref">
+          <input type="checkbox" id="editChkEjec" {% if exec_items %}checked{% endif %} onchange="editToggleSection('Ejecución de obra', this.checked)" />
+          <div class="req-check-content">
+            <div class="req-check-icon"><i class="fa-solid fa-helmet-safety"></i></div>
+            <div><strong>Ejecución de obra</strong><span>Materiales requeridos para ejecución.</span></div>
+          </div>
+        </label>
+        <label class="req-check req-check-ref">
+          <input type="checkbox" id="editChkSeg" {% if safety_items %}checked{% endif %} onchange="editToggleSection('Seguridad en obra', this.checked)" />
+          <div class="req-check-content">
+            <div class="req-check-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <div><strong>Seguridad en obra</strong><span>Materiales e implementos de seguridad.</span></div>
+          </div>
+        </label>
+        {% endif %}
+        <label class="req-check req-check-ref">
+          <input type="checkbox" id="editChkOfi" {% if office_items %}checked{% endif %} onchange="editToggleSection('Útiles de oficina', this.checked)" />
+          <div class="req-check-content">
+            <div class="req-check-icon"><i class="fa-solid fa-paperclip"></i></div>
+            <div><strong>Útiles de oficina</strong><span>Materiales y útiles requeridos para oficina.</span></div>
+          </div>
+        </label>
+      </div>
+    </section>
+
+    <section class="lanr-create-section lanr-materials-section">
+      <div class="lanr-materials-head">
+        <div>
+          <div class="lanr-section-label">Relación de materiales</div>
+          <p>Ingrese los materiales por sección. Use <strong>Detalles</strong> para prioridad, fecha requerida e imágenes de referencia.</p>
+        </div>
+      </div>
+
+      <div class="nt-wrap lanr-table-wrap">
+        <div class="nt-box lanr-table-box">
+          <table class="nt-table lanr-table-ref edit-nt-table">
+            <thead>
+              <tr>
+                <th class="nt-td-n">N°</th>
+                <th class="nt-td-desc">Descripción</th>
+                <th class="nt-td-cant">Cant.</th>
+                <th class="nt-td-und">Und</th>
+                <th class="nt-td-stk">Stock</th>
+                <th class="nt-td-buy">A comprar</th>
+                <th class="nt-td-just">Justificación</th>
+                <th class="nt-td-details">Detalles</th>
+                <th class="nt-td-del">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="editReqBody">
+              {% set ns = namespace(n=0) %}
+              {% for section_name, section_class, section_icon in [
+                ('Ejecución de obra', 'ejec', 'fa-helmet-safety'),
+                ('Seguridad en obra', 'seg', 'fa-shield-halved'),
+                ('Útiles de oficina', 'ofi', 'fa-paperclip')
+              ] %}
+                {% set section_items = items|selectattr('seccion', 'equalto', section_name)|list %}
+                {% if section_items %}
+                <tr class="nt-sec-row {{ section_class }}" data-edit-header="{{ section_name }}"><td colspan="9"><i class="fa-solid {{ section_icon }}"></i>&nbsp;{{ section_name }}</td></tr>
+                {% for i in section_items %}
+                {% set ns.n = ns.n + 1 %}
+                <tr class="nt-row req-main-row" data-seccion="{{ section_name }}">
+                  <td class="nt-num">{{ ns.n }}</td>
+                  <td class="nt-td-desc">
+                    <input type="hidden" name="seccion[]" value="{{ section_name }}" />
+                    <input type="hidden" name="item_key[]" value="{{ i.item_key }}" />
+                    <textarea class="nt-auto-grow edit-auto" name="descripcion[]" rows="1">{{ i.descripcion }}</textarea>
+                  </td>
+                  <td class="nt-td-cant"><input type="number" step="0.01" min="0" name="cantidad[]" value="{{ i.cantidad }}" oninput="editReqRecalcRow(this.closest('tr'))" /></td>
+                  <td class="nt-td-und"><select name="unidad[]" required><option value="">Unidad</option>{% for u in req_units %}<option value="{{ u }}" {% if (i.unidad or '') == u %}selected{% endif %}>{{ u }}</option>{% endfor %}{% if i.unidad and i.unidad not in req_units %}<option value="{{ i.unidad }}" selected>{{ i.unidad }}</option>{% endif %}</select></td>
+                  <td class="nt-td-stk"><input type="number" step="0.01" min="0" name="stock[]" value="{{ i.stock or 0 }}" oninput="editReqRecalcRow(this.closest('tr'))" /></td>
+                  <td class="nt-td-buy"><input class="readonly-field edit-req-buy" readonly value="{{ [((i.cantidad or 0) - (i.stock or 0)), 0]|max }}" /></td>
+                  <td class="nt-td-just"><textarea class="nt-auto-grow edit-auto" name="justificacion[]" rows="1">{{ i.justificacion or '' }}</textarea></td>
+                  <td class="nt-td-details"><button type="button" class="req-details-btn" data-req-details-toggle aria-expanded="false" title="Opcional: aquí puede indicar prioridad, fecha requerida e imágenes de referencia."><i class="fa-solid fa-sliders"></i><span>Detalles</span></button><div class="req-details-summary"></div></td>
+                  <td class="nt-td-del"><div class="req-row-actions"><button type="button" class="nt-add-inline" onclick="editAddReqRowAfter(this)" title="Agregar ítem debajo" aria-label="Agregar ítem debajo"><i class="fa-solid fa-plus"></i></button><button type="button" class="nt-del" onclick="editRemoveReqRow(this)" title="Eliminar ítem" aria-label="Eliminar ítem"><i class="fa-solid fa-xmark"></i></button></div></td>
+                </tr>
+                <tr class="req-details-row hidden" data-req-details-row="1"><td colspan="9"><div class="req-details-panel">
+                  <div class="req-details-heading"><div><strong>Información interna y referencias</strong><span>Complete solo lo necesario. Prioridad y fecha no se imprimen en el PDF.</span></div><button type="button" class="req-details-close" data-req-details-close><i class="fa-solid fa-xmark"></i></button></div>
+                  <div class="req-details-grid">
+                    <div class="req-detail-field"><label title="Normal: sigue el proceso habitual. Prioritario: debe atenderse con preferencia. Urgente: requiere atención inmediata.">Prioridad</label><select name="prioridad_item[]" class="req-item-priority" title="Normal: sigue el proceso habitual. Prioritario: debe atenderse con preferencia. Urgente: requiere atención inmediata.">{% for p in ['Normal','Prioritario','Urgente'] %}<option value="{{ p }}" {% if (i.prioridad or 'Normal') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select><small>Normal por defecto. Cámbiala solo si corresponde.</small></div>
+                    <div class="req-detail-field"><label title="Opcional. Fecha máxima en la que se necesita el material.">Fecha requerida <span>(opcional)</span></label><input type="date" name="fecha_requerida_item[]" value="{{ i.fecha_requerida or '' }}" /><small>Si queda vacía, no se guarda ninguna fecha.</small></div>
+                    <div class="req-detail-field req-detail-images"><label title="Opcional. Adjunte imágenes que ayuden a identificar el material.">Imágenes de referencia <span>(opcional)</span></label><label class="req-image-btn"><i class="fa-regular fa-images"></i> Adjuntar imágenes<input type="file" name="imagenes_{{ i.item_key }}" accept="image/jpeg,image/png,image/webp" multiple hidden /></label>{% set current_images = images_by_key.get(i.item_key, []) %}<span class="req-image-count">{% if current_images %}{{ current_images|length }} imagen(es) actual(es){% else %}Sin imágenes{% endif %}</span>{% if current_images %}<div class="req-existing-images">{% for img in current_images %}<label class="req-existing-image-item"><a href="{{ url_for('view_request_item_image', image_id=img.id) }}" target="_blank">{{ img.nombre_original }}</a><span><input type="checkbox" name="remove_image_ids[]" value="{{ img.id }}" /> Eliminar</span></label>{% endfor %}</div>{% endif %}<div class="req-image-preview" data-image-preview></div><small>JPG, PNG o WEBP. Puede conservar, eliminar o agregar imágenes.</small></div>
+                  </div>
+                </div></td></tr>
+                {% endfor %}
+                {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="lanr-create-section lanr-support-section">
+      <div class="lanr-section-label">Archivo externo del requerimiento <span class="optional-label">(opcional)</span></div>
+      {% if attachments %}
+        {% set a = attachments[0] %}
+        <div class="lanr-external-file-preview lanr-current-external-file">
+          <div class="lanr-external-file-info"><i class="fa-regular fa-file-lines"></i><div><strong>{{ a.nombre_original }}</strong><span>Archivo externo guardado</span></div></div>
+          <div class="lanr-external-file-actions">
+            <a class="btn" href="{{ url_for('view_attachment', aid=a.id) }}" target="_blank"><i class="fa-regular fa-eye"></i> Ver archivo</a>
+            <label class="btn danger lanr-delete-file-btn"><input type="checkbox" name="eliminar_adjuntos[]" value="{{ a.id }}" hidden><i class="fa-regular fa-trash-can"></i> Eliminar</label>
+          </div>
+        </div>
+      {% else %}
+        <div class="lanr-no-external-file"><i class="fa-regular fa-folder-open"></i> No hay un archivo externo adjunto.</div>
+      {% endif %}
+      <div class="field">
+        <label for="editReqDocumentos">{% if attachments %}Reemplazar archivo{% else %}Adjuntar copia en PDF o Excel{% endif %}</label>
+        <input id="editReqDocumentos" type="file" name="documentos" accept=".pdf,.xls,.xlsx,.xlsm,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <div id="editReqExternalFilePreview" class="lanr-external-file-preview" hidden>
+          <div class="lanr-external-file-info"><i class="fa-regular fa-file-lines"></i><div><strong id="editReqExternalFileName"></strong><span>Nuevo archivo seleccionado</span></div></div>
+          <div class="lanr-external-file-actions"><a id="editReqExternalFileView" class="btn" href="#" target="_blank"><i class="fa-regular fa-eye"></i> Ver archivo</a><button id="editReqExternalFileClear" type="button" class="btn danger"><i class="fa-solid fa-xmark"></i> Quitar</button></div>
+        </div>
+        <small class="field-help">Solo se conserva un archivo externo. Si selecciona uno nuevo, reemplazará al actual al guardar los cambios.</small>
+      </div>
+    </section>
+
+    <section class="lanr-create-section lanr-identification-section">
+      <div class="lanr-section-label">Identificación del trámite</div>
+      <div class="lanr-identification-grid">
+        <div class="field"><label>Código de formato</label><input class="readonly-field" readonly value="{{ t.formato or '' }}" /></div>
+        <div class="field"><label>Código de seguimiento</label><input class="readonly-field" readonly value="{{ t.tracking }}" /></div>
+        <div class="pre-review-note lanr-review-note"><i class="fa-solid fa-circle-info"></i><div><strong>El trámite sigue en su revisión</strong><span>Guarde los cambios y luego podrá dar su V.°B.°.</span></div></div>
+      </div>
+    </section>
+
+    <div class="lanr-create-actions">
+      <a href="{{ url_for('request_detail', tid=t.id) }}" class="btn lanr-cancel-btn">Cancelar</a>
+      <button type="submit" class="btn primary submit-tramite lanr-save-btn"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
+    </div>
+  </form>
+  <div id="editReqItemGuardModal" class="lanr-confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="editReqItemGuardTitle">
+    <div class="lanr-confirm-card">
+      <div class="lanr-confirm-icon warning"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h3 id="editReqItemGuardTitle">Información ingresada</h3>
+      <p id="editReqItemGuardMessage"></p>
+      <div class="lanr-confirm-actions">
+        <button type="button" class="btn" data-edit-req-guard-cancel>Cancelar</button>
+        <button type="button" class="btn primary hidden" data-edit-req-guard-confirm>Eliminar ítem</button>
+        <button type="button" class="btn primary hidden" data-edit-req-guard-ok>Entendido</button>
+      </div>
+    </div>
+  </div>
+  <div id="editRequestUnitData" hidden data-req-units='{{ req_units|tojson }}' data-sp-units='[]'></div>
+</div>
+{% endif %}
+{% endblock %}

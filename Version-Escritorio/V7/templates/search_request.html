@@ -1,0 +1,65 @@
+{% extends 'base.html' %} {% block title %} Buscar trámite | LANR {% endblock %}
+{% block content %}
+
+<div class="pagehead">
+  <div>
+    <h1>Buscar trámite</h1>
+
+    <p>Localiza requerimientos y solicitudes de pago por su código.</p>
+  </div>
+</div>
+
+<div class="card search-tramite-card">
+  <div class="search-tramite-head">
+    <div>
+      <h3>Consulta de trámites</h3>
+
+      <p class="muted">
+        Seleccione el tipo de trámite y empiece a escribir el código.
+      </p>
+    </div>
+
+    <i class="fa-solid fa-magnifying-glass search-main-icon"></i>
+  </div>
+
+  <div class="search-tramite-fields">
+    <div class="field">
+      <label for="tipoBusqueda"> Tipo de trámite </label>
+
+      <select id="tipoBusqueda">
+        <option value="REQ">Requerimiento de materiales</option>
+
+        <option value="SP">Solicitud de pago</option>
+      </select>
+    </div>
+
+    <div class="field search-code-field">
+      <label for="buscarCodigo"> Código </label>
+
+      <div class="search-input-wrapper">
+        <i class="fa-solid fa-magnifying-glass"></i>
+
+        <input
+          id="buscarCodigo"
+          type="text"
+          autocomplete="off"
+          placeholder="Escriba parte del código..."
+        />
+      </div>
+
+      <small class="muted"> REQ-LAVEGA-2026-001 / SP-LAVEGA-2026-001 </small>
+    </div>
+  </div>
+
+  <div id="resultadosBusqueda" class="search-results">
+    <div class="search-empty">
+      <i class="fa-regular fa-keyboard"></i>
+
+      <strong> Empieza a escribir </strong>
+
+      <span> Los trámites coincidentes aparecerán aquí automáticamente. </span>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

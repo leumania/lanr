@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% block title %}Administrar unidades | LANR{% endblock %}
+{% block content %}
+
+<div class="pagehead units-pagehead">
+  <div>
+    <h1>Administrar unidades</h1>
+    <p>Gestiona las unidades disponibles para Requerimientos y Solicitudes de pago.</p>
+  </div>
+
+  <button class="btn primary units-new-trigger" type="button" data-modal-open="new-unit-modal">
+    <i class="fa-solid fa-plus"></i> Nueva unidad
+  </button>
+</div>
+
+<div class="card units-table-card">
+  <div class="units-table-head">
+    <div>
+      <h3>Unidades registradas</h3>
+      <p>Visualiza las unidades y administra cada registro cuando lo necesites.</p>
+    </div>
+    <span class="units-count">{{ unidades|length }} registradas</span>
+  </div>
+
+  <div class="tablewrap units-tablewrap">
+    <table class="units-table units-list-table">
+      <colgroup>
+        <col class="units-col-name">
+        <col class="units-col-use">
+        <col class="units-col-status">
+        <col class="units-col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Unidad</th>
+          <th>Uso</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for unidad in unidades %}
+        <tr>
+          <td><span class="units-abbr">{{ unidad.abreviatura }}</span></td>
+          <td>
+            <span class="units-use">
+              {% if unidad.uso == 'REQ' %}
+                Requerimientos
+              {% elif unidad.uso == 'SP' %}
+                Solicitudes de pago
+              {% else %}
+                Ambos
+              {% endif %}
+            </span>
+          </td>
+          <td>
+            <span class="units-status {% if not unidad.active %}inactive{% endif %}">
+              {{ 'Activa' if unidad.active else 'Inactiva' }}
+            </span>
+          </td>
+          <td>
+            <div class="units-actions">
+              <button
+                class="units-mini-btn edit js-unit-edit"
+                type="button"
+                data-action="{{ url_for('edit_unit', unit_id=unidad.id) }}"
+                data-abreviatura="{{ unidad.abreviatura }}"
+                data-uso="{{ unidad.uso }}">
+                <i class="fa-solid fa-pen"></i> Editar
+              </button>
+
+              <form id="toggle-unit-{{ unidad.id }}" method="post" action="{{ url_for('toggle_unit_status', unit_id=unidad.id) }}">
+                <button
+                  class="units-mini-btn status js-unit-confirm"
+                  type="button"
+                  data-form-id="toggle-unit-{{ unidad.id }}"
+                  data-confirm-type="{{ 'deactivate' if unidad.active else 'activate' }}"
+                  data-unit="{{ unidad.abreviatura|e }}">
+                  <i class="fa-solid {{ 'fa-ban' if unidad.active else 'fa-circle-check' }}"></i>
+                  {{ 'Desactivar' if unidad.active else 'Activar' }}
+                </button>
+              </form>
+
+              <form id="delete-unit-{{ unidad.id }}" method="post" action="{{ url_for('delete_unit', unit_id=unidad.id) }}">
+                <button
+                  class="units-mini-btn delete js-unit-confirm"
+                  type="button"
+                  data-form-id="delete-unit-{{ unidad.id }}"
+                  data-confirm-type="delete"
+                  data-unit="{{ unidad.abreviatura|e }}">
+                  <i class="fa-solid fa-trash"></i> Eliminar
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Nueva unidad -->
+<div id="new-unit-modal" class="units-modal hidden" role="dialog" aria-modal="true" aria-labelledby="new-unit-title">
+  <div class="units-modal-backdrop" data-modal-close="new-unit-modal"></div>
+
+  <div class="units-modal-card">
+    <div class="units-modal-head">
+      <div>
+        <h3 id="new-unit-title">Nueva unidad</h3>
+        <p>Registra la abreviatura y define dónde estará disponible.</p>
+      </div>
+      <button class="units-modal-close" type="button" data-modal-close="new-unit-modal" aria-label="Cerrar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form method="post" action="{{ url_for('create_unit') }}" class="units-modal-form">
+      <div class="field">
+        <label for="new-unit-abbr">Abreviatura</label>
+        <input id="new-unit-abbr" name="abreviatura" maxlength="20" placeholder="Ingrese unidad" autocomplete="off" required>
+        <small>Use solo la abreviatura que verá el usuario.</small>
+      </div>
+
+      <div class="field">
+        <label for="new-unit-use">Disponible en</label>
+        <select id="new-unit-use" name="uso" required>
+          <option value="REQ">Requerimientos</option>
+          <option value="SP">Solicitudes de pago</option>
+          <option value="AMBOS">Ambos</option>
+        </select>
+        <small>Define en qué trámite aparecerá.</small>
+      </div>
+
+      <div class="units-modal-actions">
+        <button class="btn" type="button" data-modal-close="new-unit-modal">Cancelar</button>
+        <button class="btn primary" type="submit">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar unidad
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Editar unidad -->
+<div id="edit-unit-modal" class="units-modal hidden" role="dialog" aria-modal="true" aria-labelledby="edit-unit-title">
+  <div class="units-modal-backdrop" data-modal-close="edit-unit-modal"></div>
+
+  <div class="units-modal-card">
+    <div class="units-modal-head">
+      <div>
+        <h3 id="edit-unit-title">Editar unidad</h3>
+        <p>Actualiza la abreviatura o el tipo de trámite donde estará disponible.</p>
+      </div>
+      <button class="units-modal-close" type="button" data-modal-close="edit-unit-modal" aria-label="Cerrar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="edit-unit-form" method="post" class="units-modal-form">
+      <div class="field">
+        <label for="edit-unit-abbr">Abreviatura</label>
+        <input id="edit-unit-abbr" name="abreviatura" maxlength="20" autocomplete="off" required>
+      </div>
+
+      <div class="field">
+        <label for="edit-unit-uso">Disponible en</label>
+        <select id="edit-unit-uso" name="uso" required>
+          <option value="REQ">Requerimientos</option>
+          <option value="SP">Solicitudes de pago</option>
+          <option value="AMBOS">Ambos</option>
+        </select>
+      </div>
+
+      <div class="units-modal-actions">
+        <button class="btn" type="button" data-modal-close="edit-unit-modal">Cancelar</button>
+        <button class="btn primary" type="submit">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Confirmación -->
+<div id="unit-confirm-modal" class="units-modal hidden" role="dialog" aria-modal="true" aria-labelledby="unit-confirm-title">
+  <div class="units-modal-backdrop" data-modal-close="unit-confirm-modal"></div>
+
+  <div class="units-modal-card units-confirm-card">
+    <div class="units-modal-head units-confirm-head">
+      <div>
+        <h3 id="unit-confirm-title">Confirmar acción</h3>
+        <p id="unit-confirm-text"></p>
+      </div>
+      <button class="units-modal-close" type="button" data-modal-close="unit-confirm-modal" aria-label="Cerrar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <p id="unit-confirm-note" class="units-confirm-note hidden"></p>
+
+    <div class="units-confirm-actions">
+      <button class="btn" type="button" data-modal-close="unit-confirm-modal">Cancelar</button>
+      <button id="unit-confirm-submit" class="btn primary" type="button">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

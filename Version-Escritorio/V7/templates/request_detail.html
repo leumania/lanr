@@ -1,0 +1,2890 @@
+{% extends 'base.html' %} {% block title %} Detalle del trámite | LANR {%
+endblock %} {% block content %}
+<style>
+  .creator-review-card {
+    margin-top: 16px;
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    border: 1px solid #efb8b8;
+    border-left: 4px solid #c91f2a;
+    background: #fff7f7;
+    box-shadow: none;
+  }
+  .creator-review-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: #fdeaea;
+    color: #b52b34;
+    font-size: 18px;
+  }
+  .creator-review-copy h2 {
+    margin: 3px 0 4px;
+    font-size: 17px;
+    color: #7f1d1d;
+  }
+  .creator-review-copy p {
+    margin: 0;
+    color: #74565a;
+    line-height: 1.4;
+    font-size: 11px;
+  }
+  .creator-review-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .creator-review-actions form {
+    margin: 0;
+  }
+  .btn.review-danger {
+    color: #a83232;
+    border-color: #e1b1b1;
+    background: #fff;
+  }
+  .btn.review-danger:hover {
+    background: #fdeaea;
+    border-color: #cf8585;
+  }
+  .review-stage-label {
+    display: inline-block;
+    color: #a83232;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  @media (max-width: 850px) {
+    .creator-review-card {
+      grid-template-columns: auto 1fr;
+    }
+    .creator-review-actions {
+      grid-column: 1/-1;
+    }
+  }
+
+  /* =========================================================
+     DETALLE EN REVISIÓN — MODAL VERTICAL
+  ========================================================= */
+  .detail-modal-window {
+    width: min(760px, calc(100% - 32px)) !important;
+    max-width: 760px !important;
+  }
+
+  .modal-vertical-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px 18px;
+    max-height: 58vh;
+    overflow-y: auto;
+  }
+
+  .modal-item-card {
+    border: 1px solid #d8e4ea;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .modal-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 11px;
+    background: #eef5f9;
+    border-bottom: 1px solid #d5e3eb;
+  }
+
+  .modal-item-head strong {
+    color: #264f69;
+    font-size: 11px;
+  }
+
+  .modal-item-head span {
+    color: #71818c;
+    font-size: 10px;
+  }
+
+  .modal-item-body {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px 14px;
+    padding: 11px;
+  }
+
+  .modal-data {
+    min-width: 0;
+  }
+
+  .modal-data.full {
+    grid-column: 1 / -1;
+  }
+
+  .modal-data.half {
+    grid-column: span 2;
+  }
+
+  .modal-data label {
+    display: block;
+    margin-bottom: 3px;
+    color: #83919a;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .modal-data div {
+    color: #263e4c;
+    font-size: 11px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 650px) {
+    .modal-item-body {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .modal-data.half {
+      grid-column: 1 / -1;
+    }
+  }
+
+
+  /* =========================================================
+     DETALLE EN REVISIÓN — TABLA COMPACTA
+  ========================================================= */
+  .detail-modal-window {
+    width: min(880px, calc(100% - 32px)) !important;
+    max-width: 880px !important;
+  }
+
+  .review-table-wrap {
+    padding: 12px 16px 16px;
+    max-height: 58vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .review-detail-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #d6e2e9;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .review-detail-table th {
+    padding: 8px 9px;
+    background: #eef5f9 !important;
+    color: #315a72 !important;
+    border-right: 1px solid #d7e3ea;
+    border-bottom: 1px solid #cbdce6;
+    font-size: 9px;
+    font-weight: 700;
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: normal;
+  }
+
+  .review-detail-table th:last-child {
+    border-right: 0;
+  }
+
+  .review-detail-table td {
+    padding: 9px;
+    vertical-align: top;
+    border-right: 1px solid #e2e9ed;
+    border-bottom: 1px solid #e2e9ed;
+    color: #304754;
+    font-size: 10px;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .review-detail-table td:last-child {
+    border-right: 0;
+  }
+
+  .review-detail-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .review-detail-table .col-item { width: 18%; }
+  .review-detail-table .col-description { width: 35%; }
+  .review-detail-table .col-data { width: 20%; }
+  .review-detail-table .col-just { width: 27%; }
+
+  .review-section-name {
+    display: block;
+    margin-bottom: 3px;
+    color: #245f83;
+    font-weight: 700;
+  }
+
+  .review-item-number {
+    color: #7a8b95;
+    font-size: 9px;
+  }
+
+  .review-mini-data {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 8px;
+  }
+
+  .review-mini-data span {
+    display: block;
+    min-width: 0;
+  }
+
+  .review-mini-data small {
+    display: block;
+    color: #84939c;
+    font-size: 8px;
+    margin-bottom: 1px;
+  }
+
+  @media (max-width: 650px) {
+    .detail-modal-window {
+      width: calc(100% - 20px) !important;
+    }
+
+    .review-detail-table th,
+    .review-detail-table td {
+      padding: 7px 6px;
+    }
+
+    .review-mini-data {
+      grid-template-columns: 1fr;
+    }
+  }
+
+
+/* ===== MODAL DETALLE V2 ===== */
+.detail-modal-window{
+  width:min(920px,calc(100% - 32px))!important;
+  max-width:920px!important;
+}
+.review-table-wrap{padding:0 16px 16px;max-height:56vh;overflow:auto}
+.req-review-table{
+  width:100%;border-collapse:collapse;table-layout:fixed;
+  border:1px solid #d7e2e9;border-radius:10px;overflow:hidden;background:#fff
+}
+.req-review-table thead th{
+  background:#153f59!important;color:#fff!important;
+  padding:10px 9px;font-size:9px;font-weight:700;text-align:left;
+  border-right:1px solid rgba(255,255,255,.12)
+}
+.req-review-table thead th:last-child{border-right:0}
+.req-review-table td{
+  padding:10px 9px;border-right:1px solid #e1e9ee;
+  border-bottom:1px solid #e1e9ee;vertical-align:top;
+  font-size:10px;line-height:1.45;color:#263f4e;
+  overflow-wrap:anywhere;word-break:break-word
+}
+.req-review-table td:last-child{border-right:0}
+.req-review-table tbody tr:last-child td{border-bottom:0}
+.req-num{width:7%;text-align:center!important}
+.req-sec{width:18%}.req-desc{width:31%}.req-cant{width:9%}
+.req-und{width:9%}.req-stock{width:9%}.req-just{width:17%}
+.req-section-badge{
+  display:inline-block;padding:4px 7px;border-radius:6px;
+  background:#edf5f9;color:#245c7b;font-weight:650;font-size:9px
+}
+.req-number{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:24px;height:24px;border-radius:6px;
+  background:#f0f5f8;color:#234f69;font-weight:700
+}
+.req-empty{color:#9aa8b0}
+@media(max-width:700px){
+  .review-table-wrap{overflow-x:auto}
+  .req-review-table{min-width:760px}
+}
+
+
+
+/* ===== CONFIRMACIÓN V°B° ===== */
+.vb-confirm-overlay{position:fixed;inset:0;background:rgba(10,31,45,.48);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:99999}
+.vb-confirm-overlay.hidden{display:none}
+.vb-confirm-box{width:min(430px,100%);background:#fff;border-radius:14px;box-shadow:0 18px 55px rgba(15,45,65,.24);overflow:hidden;animation:vbIn .16s ease-out}
+@keyframes vbIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.vb-confirm-body{padding:24px 24px 18px;text-align:center}
+.vb-confirm-icon{width:50px;height:50px;border-radius:50%;margin:0 auto 13px;display:grid;place-items:center;background:#eaf4f8;color:#174e6d;font-size:20px}
+.vb-confirm-body h3{margin:0 0 7px;color:#153f59;font-size:18px}
+.vb-confirm-body p{margin:0;color:#687c88;font-size:12px;line-height:1.55}
+.vb-confirm-actions{display:flex;justify-content:center;gap:9px;padding:0 24px 22px}
+.vb-confirm-actions form{margin:0}
+.vb-confirm-actions .btn{min-width:112px;justify-content:center}
+
+
+/* ===== AJUSTE FINAL: MODAL VER / DETALLE COMPLETO ===== */
+.detail-modal-window{width:min(980px,calc(100vw - 48px))!important;max-width:980px!important;overflow:hidden!important;}
+.detail-modal-window .review-table-wrap{padding:0 16px 16px!important;max-height:58vh!important;overflow-y:auto!important;overflow-x:hidden!important;}
+.detail-modal-window .req-review-table{width:100%!important;table-layout:fixed!important;border-collapse:collapse!important;}
+.detail-modal-window .req-review-table th{padding:10px 8px!important;font-size:9px!important;white-space:nowrap!important;vertical-align:middle!important;}
+.detail-modal-window .req-review-table td{padding:10px 8px!important;font-size:10px!important;line-height:1.45!important;vertical-align:top!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;overflow:hidden!important;}
+.detail-modal-window .req-review-table .req-num{width:7%!important;text-align:center!important;}
+.detail-modal-window .req-review-table .req-sec{width:18%!important;}
+.detail-modal-window .req-review-table .req-desc{width:31%!important;}
+.detail-modal-window .req-review-table .req-cant{width:9%!important;}
+.detail-modal-window .req-review-table .req-und{width:9%!important;}
+.detail-modal-window .req-review-table .req-stock{width:9%!important;}
+.detail-modal-window .req-review-table .req-just{width:17%!important;}
+.detail-modal-window .req-review-table td:nth-child(3),
+.detail-modal-window .req-review-table td:nth-child(7){white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important;}
+.detail-modal-window .req-section-badge{display:inline-block!important;max-width:100%!important;white-space:normal!important;line-height:1.3!important;}
+.detail-modal-window .req-number{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:24px!important;height:24px!important;padding:0 5px!important;}
+@media(max-width:800px){.detail-modal-window .review-table-wrap{overflow-x:auto!important}.detail-modal-window .req-review-table{min-width:820px!important}}
+
+
+/* ===== DETALLE SP VERTICAL ===== */
+.sp-detail-vertical{display:grid;gap:10px;margin-top:12px}
+.sp-detail-item{border:1px solid #d8e3e9;border-radius:10px;background:#fff;overflow:hidden}
+.sp-detail-item-head{padding:8px 12px;background:#eef5f9;border-bottom:1px solid #d8e3e9;color:#285a76;font-size:10px;font-weight:700}
+.sp-detail-concept{padding:11px 12px;border-bottom:1px solid #e5ecef;min-width:0}
+.sp-detail-concept span,.sp-detail-data span{display:block;margin-bottom:3px;color:#80909a;font-size:9px;font-weight:700}
+.sp-detail-concept strong{display:block;color:#263f4e;font-size:11px;line-height:1.5;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.sp-detail-data{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+.sp-detail-data>div{padding:10px 12px;border-right:1px solid #e5ecef;min-width:0}
+.sp-detail-data>div:last-child{border-right:0}
+.sp-detail-data strong{display:block;color:#263f4e;font-size:11px;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:700px){.sp-detail-data{grid-template-columns:repeat(2,minmax(0,1fr))}.sp-detail-data>div:nth-child(2){border-right:0}.sp-detail-data>div:nth-child(-n+2){border-bottom:1px solid #e5ecef}}
+
+
+/* ===== SOLICITUD DE PAGO: MISMO DETALLE QUE REQUERIMIENTO ===== */
+.sp-summary-tablewrap {
+  overflow-x: hidden !important;
+}
+.sp-summary-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.sp-summary-table th:nth-child(1), .sp-summary-table td:nth-child(1) { width: 7%; }
+.sp-summary-table th:nth-child(2), .sp-summary-table td:nth-child(2) { width: 48%; }
+.sp-summary-table th:nth-child(3), .sp-summary-table td:nth-child(3) { width: 9%; }
+.sp-summary-table th:nth-child(4), .sp-summary-table td:nth-child(4) { width: 9%; }
+.sp-summary-table th:nth-child(5), .sp-summary-table td:nth-child(5) { width: 13%; }
+.sp-summary-table th:nth-child(6), .sp-summary-table td:nth-child(6) { width: 14%; }
+.sp-summary-table th,
+.sp-summary-table td {
+  white-space: normal !important;
+  vertical-align: top;
+}
+.sp-summary-table .sp-concept-cell {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  line-height: 1.45;
+}
+
+
+/* ===== REQUERIMIENTO: DETALLE SIN DESPLAZAMIENTO HORIZONTAL ===== */
+.req-summary-tablewrap {
+  overflow-x: hidden !important;
+}
+.req-summary-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.req-summary-table th:nth-child(1), .req-summary-table td:nth-child(1) { width: 14%; }
+.req-summary-table th:nth-child(2), .req-summary-table td:nth-child(2) { width: 6%; }
+.req-summary-table th:nth-child(3), .req-summary-table td:nth-child(3) { width: 28%; }
+.req-summary-table th:nth-child(4), .req-summary-table td:nth-child(4) { width: 8%; }
+.req-summary-table th:nth-child(5), .req-summary-table td:nth-child(5) { width: 7%; }
+.req-summary-table th:nth-child(6), .req-summary-table td:nth-child(6) { width: 8%; }
+.req-summary-table th:nth-child(7), .req-summary-table td:nth-child(7) { width: 9%; }
+.req-summary-table th:nth-child(8), .req-summary-table td:nth-child(8) { width: 20%; }
+.req-summary-table th,
+.req-summary-table td {
+  white-space: normal !important;
+  vertical-align: top;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  line-height: 1.45;
+}
+.req-summary-table .req-desc-cell,
+.req-summary-table .req-just-cell {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+
+
+/* =========================================================
+   SEGUIMIENTO — HORIZONTAL A TODO EL ANCHO
+========================================================= */
+
+.card .history {
+  display: grid !important;
+
+  grid-template-columns:
+    170px
+    220px
+    minmax(0, 1fr) !important;
+
+  align-items: center !important;
+
+  gap: 20px !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  box-sizing: border-box !important;
+
+  padding: 14px 0 !important;
+
+  border-bottom: 1px solid #e4ebef !important;
+}
+
+
+/* ÚLTIMA FILA */
+
+.card .history:last-child {
+  border-bottom: 0 !important;
+}
+
+
+/* =========================================================
+   FECHA
+========================================================= */
+
+.card .history > span:first-child {
+
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+
+  display: block !important;
+
+  color: #758996 !important;
+
+  font-size: 10px !important;
+
+  line-height: 1.4 !important;
+
+  white-space: nowrap !important;
+
+  min-width: 0 !important;
+}
+
+
+/* =========================================================
+   RESPONSABLE
+========================================================= */
+
+.card .history > strong {
+
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+
+  display: block !important;
+
+  color: #153f59 !important;
+
+  font-size: 11px !important;
+
+  font-weight: 700 !important;
+
+  line-height: 1.4 !important;
+
+  min-width: 0 !important;
+
+  white-space: normal !important;
+
+  overflow-wrap: anywhere !important;
+}
+
+
+/* =========================================================
+   ACCIÓN
+========================================================= */
+
+.card .history > span:last-child {
+
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+
+  display: block !important;
+
+  color: #536b79 !important;
+
+  font-size: 11px !important;
+
+  line-height: 1.45 !important;
+
+  min-width: 0 !important;
+
+  white-space: normal !important;
+
+  overflow-wrap: anywhere !important;
+
+  word-break: normal !important;
+}
+
+
+/* =========================================================
+   SEGUIMIENTO — TARJETA
+========================================================= */
+
+.history-full-layout,
+.logistics-full-stack {
+
+  width: 100% !important;
+
+  max-width: 100% !important;
+
+  min-width: 0 !important;
+}
+
+
+.history-full-layout > .card,
+.logistics-full-stack > .card {
+
+  width: 100% !important;
+
+  max-width: 100% !important;
+
+  min-width: 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+
+  .card .history {
+
+    grid-template-columns:
+      145px
+      180px
+      minmax(0, 1fr) !important;
+
+    gap: 14px !important;
+  }
+}
+
+
+/* =========================================================
+   CELULAR
+========================================================= */
+
+@media (max-width: 650px) {
+
+  .card .history {
+
+    grid-template-columns: 1fr !important;
+
+    gap: 4px !important;
+
+    padding: 13px 0 !important;
+  }
+
+
+  .card .history > span:first-child,
+  .card .history > strong,
+  .card .history > span:last-child {
+
+    grid-column: 1 !important;
+
+    grid-row: auto !important;
+  }
+
+
+  .card .history > span:first-child {
+
+    margin-bottom: 2px !important;
+  }
+}
+
+
+  /* =========================================================
+     LOGÍSTICA — COMPRA HORIZONTAL + COMPROBANTES
+  ========================================================= */
+  .logistics-main-full {
+    grid-column: 1 / -1;
+  }
+
+  .purchase-stage-horizontal {
+    width: 100%;
+  }
+
+  .purchase-receipts {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .purchase-receipt-row {
+    display: grid;
+    grid-template-columns: 42px 150px 150px minmax(150px,1fr) 135px minmax(190px,1.2fr) 36px;
+    gap: 9px;
+    align-items: end;
+    padding: 11px;
+    border: 1px solid #d8e3e9;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .purchase-receipt-row .field {
+    margin: 0;
+    min-width: 0;
+  }
+
+  .purchase-receipt-row label {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  .purchase-receipt-num {
+    align-self: center;
+    justify-self: center;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 7px;
+    background: #edf4f8;
+    color: #24536f;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .purchase-remove {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e2c3c3;
+    border-radius: 8px;
+    background: #fff;
+    color: #b73535;
+    cursor: pointer;
+  }
+
+  .purchase-add-btn {
+    margin-top: 10px;
+  }
+
+  .purchase-total-box {
+    margin-top: 12px;
+    padding: 11px 13px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    align-items: center;
+    border-top: 1px solid #e3eaee;
+  }
+
+  .purchase-total-box span {
+    color: #6c808d;
+    font-size: 10px;
+  }
+
+  .purchase-total-box strong {
+    color: #153f59;
+    font-size: 15px;
+  }
+
+  .regularization-note {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid #cfe0e9;
+    border-radius: 10px;
+    background: #eef6fa;
+    color: #385c72;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+
+  .purchase-list-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .purchase-list-table th,
+  .purchase-list-table td {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+
+  .purchase-regularization-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .purchase-regularization-table th,
+  .purchase-regularization-table td {
+    white-space: normal !important;
+    vertical-align: top;
+  }
+
+  .purchase-regularization-table textarea {
+    min-height: 38px;
+    resize: vertical;
+  }
+
+  @media (max-width: 1100px) {
+    .purchase-receipt-row {
+      grid-template-columns: 38px repeat(2,minmax(140px,1fr));
+    }
+    .purchase-receipt-row > * {
+      min-width: 0;
+    }
+  }
+
+
+/* =========================================================
+   AJUSTE FINAL — LOGÍSTICA A TODO EL ANCHO
+========================================================= */
+.logistics-full-stack{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) !important;
+  gap:16px !important;
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+}
+
+.logistics-full-stack > div,
+.logistics-full-stack > .card,
+.logistics-full-stack .stage-card{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+}
+
+.logistics-full-stack .card{
+  margin:0 !important;
+}
+
+.logistics-full-stack .purchase-stage-horizontal{
+  grid-column:1 !important;
+  width:100% !important;
+  max-width:100% !important;
+  overflow:hidden !important;
+}
+
+.logistics-full-stack .purchase-receipts{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+}
+
+.logistics-full-stack .purchase-receipt-row{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+
+  grid-template-columns:
+    34px
+    minmax(125px,1fr)
+    minmax(115px,.9fr)
+    minmax(145px,1.15fr)
+    minmax(105px,.75fr)
+    minmax(170px,1.35fr)
+    34px !important;
+
+  gap:10px !important;
+  padding:12px !important;
+}
+
+.logistics-full-stack .purchase-receipt-row .field,
+.logistics-full-stack .purchase-receipt-row input,
+.logistics-full-stack .purchase-receipt-row select{
+  min-width:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+
+.logistics-full-stack .purchase-receipt-row input[type="file"]{
+  font-size:10px !important;
+  padding:8px !important;
+}
+
+.logistics-full-stack .purchase-total-box{
+  margin-left:auto !important;
+  width:min(270px,100%) !important;
+}
+
+.logistics-full-stack + .card,
+.logistics-full-stack .history-full-layout{
+  width:100% !important;
+}
+
+@media(max-width:1050px){
+  .logistics-full-stack .purchase-receipt-row{
+    grid-template-columns:
+      34px
+      repeat(2,minmax(0,1fr)) !important;
+  }
+
+  .logistics-full-stack .purchase-receipt-row > *{
+    min-width:0 !important;
+  }
+
+  .logistics-full-stack .purchase-receipt-row .purchase-remove{
+    justify-self:end !important;
+  }
+}
+
+@media(max-width:700px){
+  .logistics-full-stack .purchase-receipt-row{
+    grid-template-columns:34px minmax(0,1fr) !important;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE FINAL — GESTIÓN DE COMPRA
+========================================================= */
+
+.purchase-stage-horizontal {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.purchase-stage-horizontal form {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.purchase-receipts {
+  display: grid !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin-top: 14px !important;
+}
+
+.purchase-receipt-row {
+  display: grid !important;
+  grid-template-columns:
+    34px
+    minmax(135px, 0.85fr)
+    minmax(130px, 0.78fr)
+    minmax(180px, 1.12fr)
+    minmax(115px, 0.72fr)
+    minmax(235px, 1.55fr)
+    36px !important;
+  gap: 12px !important;
+  align-items: end !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  padding: 14px !important;
+  box-sizing: border-box !important;
+
+  border: 1px solid #d7e3ea !important;
+  border-radius: 11px !important;
+  background: #fbfdfe !important;
+}
+
+.purchase-receipt-row .field {
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.purchase-receipt-row .field label {
+  display: block !important;
+  margin: 0 0 5px !important;
+  color: #355568 !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+}
+
+.purchase-receipt-row input,
+.purchase-receipt-row select {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  box-sizing: border-box !important;
+}
+
+.purchase-receipt-row input[type="file"] {
+  height: 42px !important;
+  padding: 7px 8px !important;
+  font-size: 9.5px !important;
+  background: #fff !important;
+}
+
+.purchase-receipt-num {
+  align-self: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 7px !important;
+  background: #eaf3f8 !important;
+  color: #194b69 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+
+.purchase-remove {
+  align-self: center !important;
+  justify-self: center !important;
+  width: 34px !important;
+  height: 34px !important;
+}
+
+.purchase-add-btn {
+  margin-top: 10px !important;
+}
+
+.purchase-total-box {
+  width: 100% !important;
+  margin: 14px 0 0 !important;
+  padding: 12px 0 0 !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 12px !important;
+  border-top: 1px solid #e3eaee !important;
+}
+
+.purchase-total-box span {
+  font-size: 10px !important;
+}
+
+.purchase-total-box strong {
+  min-width: 85px !important;
+  text-align: right !important;
+  font-size: 15px !important;
+}
+
+.regularization-note {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* =========================================================
+   AJUSTE FINAL — SEGUIMIENTO
+   Mantiene los mismos mensajes; solo aprovecha mejor el ancho.
+========================================================= */
+
+.card .history {
+  display: grid !important;
+  grid-template-columns: 135px 190px minmax(0, 1fr) !important;
+  column-gap: 18px !important;
+  row-gap: 2px !important;
+  align-items: start !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  padding: 13px 0 !important;
+  box-sizing: border-box !important;
+}
+
+.card .history > span:first-child {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+}
+
+.card .history > strong {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+}
+
+.card .history > span:last-child {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+
+  display: block !important;
+  justify-self: stretch !important;
+
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  line-height: 1.45 !important;
+}
+
+@media (max-width: 1100px) {
+  .purchase-receipt-row {
+    grid-template-columns:
+      34px
+      repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .purchase-receipt-row .field {
+    min-width: 0 !important;
+  }
+
+  .purchase-remove {
+    justify-self: end !important;
+  }
+
+  .card .history {
+    grid-template-columns: 125px 170px minmax(0, 1fr) !important;
+    column-gap: 14px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .purchase-receipt-row {
+    grid-template-columns: 34px minmax(0, 1fr) !important;
+  }
+
+  .card .history {
+    grid-template-columns: 1fr !important;
+    row-gap: 4px !important;
+  }
+
+  .card .history > span:first-child,
+  .card .history > strong,
+  .card .history > span:last-child {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+}
+
+</style>
+<div class="pagehead">
+  <div>
+    <h1>{{ t.tracking }}</h1>
+
+    <p>
+      N° {{ t.numero }} ·
+      {% if t.tipo == 'REQ' %}Requerimiento de materiales{% else %}Solicitud de pago{% endif %}
+      {% if t.subtipo %} · {{ t.subtipo }}{% endif %}
+    </p>
+  </div>
+
+  {% if t.estado != 'Pendiente de mi revisión' and t.tipo == 'REQ' %}
+
+  <div class="pdf-actions">
+    <a
+      class="btn"
+      href="{{ url_for('view_requirement_pdf', tid=t.id) }}"
+      target="_blank"
+    >
+      <i class="fa-regular fa-file-pdf"></i>
+      Visualizar PDF
+    </a>
+
+    <a
+      class="btn primary"
+      href="{{ url_for('download_requirement_pdf', tid=t.id) }}"
+    >
+      <i class="fa-solid fa-download"></i>
+      Descargar PDF
+    </a>
+  </div>
+
+  {% elif t.estado != 'Pendiente de mi revisión' and t.tipo == 'SP' %}
+
+  <div class="pdf-actions">
+    <a
+      class="btn"
+      href="{{ url_for('view_payment_request_pdf', tid=t.id) }}"
+      target="_blank"
+    >
+      <i class="fa-regular fa-file-pdf"></i>
+      Visualizar PDF
+    </a>
+
+    <a
+      class="btn primary"
+      href="{{ url_for('download_payment_request_pdf', tid=t.id) }}"
+    >
+      <i class="fa-solid fa-download"></i>
+      Descargar PDF
+    </a>
+  </div>
+
+  {% endif %}
+</div>
+
+{% if t.estado == 'Pendiente de mi revisión' and t.creador == user.id %}
+<div class="card creator-review-card">
+  <div class="creator-review-icon">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+  </div>
+
+  <div class="creator-review-copy">
+    <span class="review-stage-label">Acción pendiente</span>
+    <h2>
+      Revisa {% if t.tipo == 'REQ' %} el requerimiento {% else %} la solicitud
+      de pago {% endif %} N° {{ t.numero }}
+    </h2>
+    <p>Este trámite aún no ha sido enviado.</p>
+  </div>
+
+  <div class="creator-review-actions">
+    {% if t.tipo == 'REQ' %}
+    <a class="btn" href="{{ url_for('view_requirement_pdf', tid=t.id) }}" target="_blank">
+      <i class="fa-regular fa-file-pdf"></i>
+      Visualizar requerimiento
+    </a>
+    {% else %}
+    <button type="button" class="btn" onclick="openDetailModal()">
+      <i class="fa-regular fa-eye"></i>
+      Ver
+    </button>
+    {% endif %}
+
+    <a class="btn" href="{{ url_for('edit_request', tid=t.id) }}">
+      <i class="fa-solid fa-pen"></i>
+      Modificar
+    </a>
+
+    <button type="button" class="btn primary" onclick="openVbConfirm()">
+      <i class="fa-solid fa-check-double"></i>
+      Dar mi V°B°
+    </button>
+
+    <form
+      method="post"
+      action="{{ url_for('delete_request', tid=t.id) }}"
+      onsubmit="
+        return confirm(
+          '¿Eliminar definitivamente este trámite? Esta acción no se puede deshacer.',
+        );
+      "
+    >
+      <button type="submit" class="btn review-danger">
+        <i class="fa-regular fa-trash-can"></i>
+        Eliminar
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if t.estado != 'Pendiente de mi revisión' %}
+
+{% if t.estado != 'Pendiente de mi revisión' %}
+<div class="card">
+  <div class="infogrid">
+    <div><span>Estado</span><strong>{{t.estado}}</strong></div>
+    <div><span>Creado por</span><strong>{{t.creador_nombre}}</strong></div>
+    <div><span>Fecha</span><strong>{{t.fecha}}</strong></div>
+    {% if t.formato %}
+    <div><span>Código formato</span><strong>{{t.formato}}</strong></div>
+    {% endif %}
+  </div>
+</div>
+{% endif %} {% if t.tipo == 'REQ' and user.username|lower == 'rvasquez' %}
+
+<div class="card topgap logistics-progress-card">
+  <div class="logistics-progress-head">
+    <div>
+      <h3>Seguimiento de Logística</h3>
+      <p class="muted">Gestiona el requerimiento según la etapa actual.</p>
+    </div>
+
+    <a class="btn" href="{{ url_for('logistics_regularizations') }}">
+      <i class="fa-solid fa-clipboard-check"></i>
+      Regularizaciones
+    </a>
+  </div>
+
+  <div class="process-steps">
+    <div class="process-step done">
+      <span>1</span>
+      <div>
+        <strong>Aprobación</strong>
+        <small>2 V°B° completados</small>
+      </div>
+    </div>
+
+    <div class="process-step {% if t.estado != 'Aprobado' %}done{% else %}current{% endif %}">
+      <span>2</span>
+      <div>
+        <strong>Recepción</strong>
+        <small>Logística</small>
+      </div>
+    </div>
+
+    <div class="process-step {% if t.estado == 'Recibido por Logística' %}current{% elif t.estado in ['En gestión de compra','Enviado a obra','Cerrado'] %}done{% endif %}">
+      <span>3</span>
+      <div>
+        <strong>Compra</strong>
+        <small>Comprobantes</small>
+      </div>
+    </div>
+
+    <div class="process-step {% if t.estado == 'En gestión de compra' and gestion and not gestion.estado_pago %}current{% elif gestion and gestion.estado_pago in ['Pagado por Logística','Pagado por Tesorería','Pendiente de Tesorería'] %}done{% endif %}">
+      <span>4</span>
+      <div>
+        <strong>Pago</strong>
+        <small>Logística / Tesorería</small>
+      </div>
+    </div>
+
+    <div class="process-step {% if gestion and gestion.estado_pago in ['Pagado por Logística','Pagado por Tesorería'] and t.estado not in ['Enviado a obra','Cerrado'] %}current{% elif t.estado in ['Enviado a obra','Cerrado'] %}done{% endif %}">
+      <span>5</span>
+      <div>
+        <strong>Despacho</strong>
+        <small>Guía y envío</small>
+      </div>
+    </div>
+
+    <div class="process-step {% if t.estado == 'Enviado a obra' %}current{% elif t.estado == 'Cerrado' %}done{% endif %}">
+      <span>6</span>
+      <div>
+        <strong>Recepción obra</strong>
+        <small>Finalización</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %} {% if t.estado != 'Pendiente de mi revisión' and not (t.tipo ==
+'REQ' and user.username|lower in ['rvasquez','ogonzales']) %}
+
+<div class="card topgap">
+  <h3>Vistos buenos / aprobaciones</h3>
+  <div class="approvalgrid">
+    {% for a in approvals %}
+    <div class="approval">
+      <strong>{{a.rol}}</strong>{% if a.aprobado %}<span class="ok"
+        >✓ APROBADO</span
+      ><small>{{a.nombre}}<br />{{a.fecha}}</small>{% else %}<span class="wait"
+        >Pendiente de V°B°</span
+      ><small>{{a.nombre}}</small>{% if a.usuario_id==user.id or
+      user.role=='Sistemas' %}
+      <form method="post" action='{{ url_for("approve",aid=a.id) }}'>
+        <button class="btn primary small">Dar visto bueno</button>
+      </form>
+      {% endif %}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card topgap">
+  <div class="card-title-row">
+    <div>
+      <h3>Detalle</h3>
+      <p class="muted">Vista resumida del trámite.</p>
+    </div>
+
+    {% if items|length > 3 %}
+    <button type="button" class="view-all" onclick="openDetailModal()">
+      Ver {{ items|length }} ítems
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
+    {% endif %}
+  </div>
+
+  {% if t.tipo == 'REQ' %}
+  <div class="tablewrap req-summary-tablewrap">
+    <table class="req-summary-table">
+      <thead>
+        <tr>
+          <th>Sección</th>
+          <th>Ítem</th>
+          <th>Descripción</th>
+          <th>Cant.</th>
+          <th>Und</th>
+          <th>Stock</th>
+          <th>A comprar</th>
+          <th>Justificación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in items[:3] %}
+        <tr>
+          <td>{{ i.seccion }}</td>
+          <td>{{ i.nro }}</td>
+          <td class="req-desc-cell">{{ i.descripcion }}</td>
+          <td>{{ i.cantidad }}</td>
+          <td>{{ i.unidad }}</td>
+          <td>{{ i.stock }}</td>
+          <td>{{ i.comprar }}</td>
+          <td class="req-just-cell">{{ i.justificacion or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="tablewrap sp-summary-tablewrap">
+    <table class="sp-summary-table">
+      <thead>
+        <tr>
+          <th>Ítem</th>
+          <th>Concepto</th>
+          <th>Und</th>
+          <th>Cant.</th>
+          <th>Costo unit.</th>
+          <th>Monto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in items[:3] %}
+        <tr>
+          <td>{{ i.nro }}</td>
+          <td class="sp-concept-cell">{{ i.descripcion }}</td>
+          <td>{{ i.unidad or '-' }}</td>
+          <td>{{ i.cantidad }}</td>
+          <td>S/ {{ "{:,.2f}".format(i.costo or 0) }}</td>
+          <td>S/ {{ "{:,.2f}".format(i.monto or 0) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{% endif %} {% if t.tipo == 'SP' %}
+
+<div class="card topgap">
+  <div class="attachments-header">
+    <div>
+      <h3>Documentos adjuntos</h3>
+      <p class="muted">Archivos registrados con esta solicitud.</p>
+    </div>
+
+    <span class="attachment-count">
+      {{ attachments|length }} archivo{% if attachments|length != 1 %}s{% endif
+      %}
+    </span>
+  </div>
+
+  {% if attachments %}
+
+  <div class="attachments-list">
+    {% for a in attachments %}
+
+    <div class="attachment-item">
+      <div class="attachment-info">
+        <div class="attachment-icon">
+          <i class="fa-regular fa-file-pdf"></i>
+        </div>
+
+        <div>
+          <strong>{{ a.nombre_original }}</strong>
+          <span>Documento PDF</span>
+        </div>
+      </div>
+
+      <div class="attachment-actions">
+        <a
+          class="btn small"
+          href="{{ url_for('view_attachment', aid=a.id) }}"
+          target="_blank"
+        >
+          <i class="fa-regular fa-eye"></i>
+          Ver
+        </a>
+
+        <a
+          class="btn small"
+          href="{{ url_for('download_attachment', aid=a.id) }}"
+        >
+          <i class="fa-solid fa-download"></i>
+          Descargar
+        </a>
+      </div>
+    </div>
+
+    {% endfor %}
+  </div>
+
+  {% else %}
+
+  <div class="attachments-empty">
+    <i class="fa-regular fa-folder-open"></i>
+    <span>No se adjuntaron documentos a esta solicitud.</span>
+  </div>
+
+  {% endif %}
+</div>
+
+{% endif %}
+
+<div
+  class="{% if t.tipo == 'REQ' and user.username|lower == 'rvasquez' %}logistics-full-stack{% else %}history-full-layout{% endif %} topgap"
+>
+  <div>
+    {% if t.tipo == 'REQ' and user.username|lower == 'rvasquez' %} {% if
+    t.estado == 'Aprobado' %}
+
+    <div class="card stage-card">
+      <span class="stage-label">ETAPA ACTUAL</span>
+      <h3>Requerimiento listo para atender</h3>
+
+      <p class="muted">
+        El requerimiento cuenta con los dos vistos buenos. Confirma la recepción
+        para iniciar la gestión de compra.
+      </p>
+
+      <form method="post" action="{{ url_for('logistics_receive', tid=t.id) }}">
+        <button class="btn primary">
+          <i class="fa-solid fa-inbox"></i>
+          Recibir requerimiento
+        </button>
+      </form>
+    </div>
+
+    {% elif t.estado == 'Recibido por Logística' %}
+
+    <div class="card stage-card purchase-stage-horizontal logistics-main-full">
+      <span class="stage-label">ETAPA 3 DE 6</span>
+      <h3>Gestión de compra</h3>
+
+      <p class="muted">
+        Registra todos los comprobantes relacionados con este requerimiento.
+        Puedes agregar más de uno antes de continuar.
+      </p>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for('logistics_purchase', tid=t.id) }}"
+        id="purchaseForm"
+      >
+        <div id="purchaseReceipts" class="purchase-receipts"></div>
+
+        <button
+          type="button"
+          class="btn purchase-add-btn"
+          onclick="addPurchaseReceipt()"
+        >
+          <i class="fa-solid fa-plus"></i>
+          Agregar comprobante
+        </button>
+
+        <div class="purchase-total-box">
+          <span>Total registrado</span>
+          <strong id="purchaseGrandTotal">S/ 0.00</strong>
+        </div>
+
+        <div class="regularization-note">
+          <i class="fa-solid fa-circle-info"></i>
+          <div>
+            <strong>La regularización se realizará después.</strong><br>
+            Al guardar la compra se generará automáticamente una regularización
+            pendiente en el módulo <strong>Regularizaciones</strong>. No bloqueará
+            la gestión de pago.
+          </div>
+        </div>
+
+        <button class="btn primary topgap">
+          <i class="fa-solid fa-floppy-disk"></i>
+          Registrar compra y continuar
+        </button>
+      </form>
+    </div>
+
+
+    {% elif t.estado == 'En gestión de compra' and gestion and not
+    gestion.estado_pago %}
+
+    <div class="card stage-card">
+      <span class="stage-label">ETAPA 4 DE 6</span>
+      <h3>Gestión de pago</h3>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Comprobantes</span>
+          <strong>{{ compras|length }}</strong>
+        </div>
+
+        <div>
+          <span>Total de compra</span>
+          <strong>S/ {{ '%.2f'|format(gestion.monto or 0) }}</strong>
+        </div>
+
+        <div>
+          <span>Regularización</span>
+          <strong>Completada</strong>
+        </div>
+      </div>
+
+      {% if gestion.monto >= 1900 %}
+
+      <div class="flash danger topgap">
+        Este monto requiere gestión mediante Tesorería.
+      </div>
+
+      {% endif %}
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for('logistics_payment', tid=t.id) }}"
+      >
+        {% if gestion.monto < 1900 %}
+
+        <div class="field">
+          <label>¿Quién realizará el pago?</label>
+
+          <div class="field">
+            <label>Forma de pago</label>
+
+            <select name="forma_pago" required>
+              <option value="">Selecciona...</option>
+
+              <option value="Caja Logística">Caja de Logística</option>
+
+              <option value="Tesorería">Solicitar fondos a Tesorería</option>
+
+              <option value="Reembolso">
+                Pago personal / solicitar reembolso
+              </option>
+            </select>
+          </div>
+        </div>
+
+
+        {% else %}
+
+        <input type="hidden" name="forma_pago" value="Tesorería" />
+
+        {% endif %}
+
+        <button class="btn primary topgap">
+          {% if gestion.monto >= 1900 %}
+
+          <i class="fa-solid fa-paper-plane"></i>
+          Solicitar pago a Tesorería {% else %}
+
+          <i class="fa-solid fa-check"></i>
+          Continuar {% endif %}
+        </button>
+      </form>
+    </div>
+
+    {% elif gestion and gestion.estado_pago == 'Pendiente de Tesorería' %}
+    <div class="card stage-card">
+      <span class="stage-label">PAGO</span><h3>Pendiente de Tesorería</h3>
+      <p class="muted">El pago fue derivado a Tesorería. Logística podrá continuar cuando Tesorería registre el pago y sus evidencias.</p>
+      <div class="purchase-summary"><div><span>Requerimiento</span><strong>{{ t.tracking }}</strong></div><div><span>Monto</span><strong>S/ {{ '%.2f'|format(gestion.monto or 0) }}</strong></div><div><span>Estado</span><strong>Esperando pago</strong></div></div>
+      {% if user.role in ['Tesorería','Sistemas'] %}{% for solicitud in tesoreria %}{% if solicitud.estado == 'Pendiente' and solicitud.origen == 'REQ-Compra' %}<a class="btn primary topgap" href="{{ url_for('treasury_detail', sid=solicitud.id) }}"><i class="fa-solid fa-building-columns"></i> Gestionar en Tesorería</a>{% endif %}{% endfor %}{% endif %}
+    </div>
+    {% elif gestion and gestion.estado_pago in [ 'Pagado por Logística', 'Pagado
+    por Tesorería' ] and t.estado != 'Enviado a obra' and t.estado != 'Cerrado'
+    %}
+
+    <div class="card stage-card">
+      <span class="stage-label">ETAPA 5 DE 6</span>
+      <h3>Despacho a obra</h3>
+
+      <div class="flash success">
+        Pago registrado:
+        <strong>{{ gestion.estado_pago }}</strong>
+      </div>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for('logistics_dispatch', tid=t.id) }}"
+      >
+        <div class="formgrid">
+
+          <!-- MEDIO DE ENVÍO -->
+          <div class="field">
+            <label>Medio de envío *</label>
+
+            <select name="medio_envio" required>
+              <option value="">Seleccione</option>
+              <option value="Chofer de LANR">
+                Chofer de LANR
+              </option>
+              <option value="Encomienda">
+                Encomienda
+              </option>
+              <option value="Transporte del proveedor">
+                Transporte del proveedor
+              </option>
+              <option value="Otro">
+                Otro
+              </option>
+            </select>
+          </div>
+
+          <!-- RESPONSABLE / EMPRESA -->
+          <div class="field">
+            <label>Responsable / empresa de transporte</label>
+
+            <input
+              type="text"
+              name="responsable_transporte"
+              placeholder="Opcional"
+            />
+          </div>
+
+          <!-- COSTO DE ENVÍO -->
+          <div class="field">
+            <label>Costo adicional de envío</label>
+
+            <input
+              type="text"
+              name="costo_envio"
+              class="money-input"
+              placeholder="0.00"
+            />
+          </div>
+
+          <!-- OBSERVACIÓN -->
+          <div class="field">
+            <label>Descripción / observación</label>
+
+            <textarea
+              name="observacion_envio"
+              rows="3"
+              placeholder="Opcional"
+            ></textarea>
+          </div>
+
+          <!-- COMPROBANTE TRANSPORTE -->
+          <div class="field">
+            <label>Comprobante del transporte</label>
+
+            <input
+              type="file"
+              name="comprobante_transporte"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+            />
+
+            <small class="muted">
+              Opcional. Puede adjuntar PDF o imagen.
+            </small>
+          </div>
+
+          <!-- EVIDENCIA ENVÍO -->
+          <div class="field">
+            <label>Evidencia del envío *</label>
+
+            <input
+              type="file"
+              name="evidencia_envio"
+              multiple
+              accept=".jpg,.jpeg,.png,.webp"
+              required
+            />
+
+            <small class="muted">
+              Adjunte una o varias fotos del envío.
+            </small>
+          </div>
+
+        </div>
+
+        <div class="topgap">
+          <h4>Guía de remisión</h4>
+
+          <p class="muted">
+            Adjunte la guía de remisión o marque que está pendiente
+            de regularizar.
+          </p>
+        </div>
+
+        <div class="formgrid">
+
+          <!-- NÚMERO DE GUÍA -->
+          <div class="field">
+            <label>N° guía de remisión</label>
+
+            <input
+              type="text"
+              name="guia_numero"
+              placeholder="Ingrese N° de guía"
+            />
+          </div>
+
+          <!-- FECHA DE GUÍA -->
+          <div class="field">
+            <label>Fecha guía</label>
+
+            <input
+              type="date"
+              name="guia_fecha"
+            />
+          </div>
+
+          <!-- ARCHIVO GUÍA -->
+          <div class="field">
+            <label>Adjuntar guía</label>
+
+            <input
+              type="file"
+              name="guia"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+            />
+
+            <small class="muted">
+              PDF o imagen.
+            </small>
+          </div>
+
+          <!-- GUÍA PENDIENTE -->
+          <div class="field">
+            <label>
+              <input
+                type="checkbox"
+                name="guia_pendiente"
+                id="guiaPendiente"
+              />
+
+              Guía pendiente de regularizar
+            </label>
+
+            <small class="muted">
+              Si todavía no cuenta con la guía, marque esta opción.
+            </small>
+          </div>
+
+        </div>
+
+        <button
+          type="submit"
+          class="btn primary topgap"
+        >
+          <i class="fa-solid fa-truck"></i>
+          Enviar a obra
+        </button>
+      </form>
+    </div>
+
+    {% elif t.estado == 'Enviado a obra' %}
+
+    <div class="card stage-card">
+      <span class="stage-label">DESPACHO COMPLETADO</span>
+
+      <h3>Materiales enviados a obra</h3>
+
+      <p class="muted">
+        Esperando confirmación de recepción por parte de obra.
+      </p>
+    </div>
+
+    {% elif t.estado == 'Cerrado' %}
+
+    <div class="card stage-card">
+      <span class="stage-label">FINALIZADO</span>
+
+      <h3>Requerimiento cerrado</h3>
+
+      <p class="muted">
+        Los materiales fueron recibidos correctamente en obra.
+      </p>
+    </div>
+
+    {% endif %} {% elif t.tipo == 'REQ' and user.username|lower in
+    ['amoreno','jbecerra','ogonzales'] and t.estado == 'Enviado a obra' %}
+
+    <div class="card">
+      <h3>Recepción en obra</h3>
+
+      <p class="muted">Confirma que los materiales llegaron correctamente.</p>
+
+      <form
+        method="post"
+        action="{{ url_for('update_request_status', tid=t.id) }}"
+      >
+        <input type="hidden" name="estado" value="Recibido en obra" />
+
+        <button class="btn primary">
+          <i class="fa-solid fa-check"></i>
+          Confirmar recepción en obra
+        </button>
+      </form>
+    </div>
+
+    {% elif t.tipo == 'SP' %} {% if gestion_sp and gestion_sp.pagado_por %}
+
+    <div class="card topgap">
+      <h3>
+        <i class="fa-solid fa-money-check-dollar"></i>
+        Pago registrado
+      </h3>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Medio de pago</span>
+          <strong> {{ gestion_sp.medio_pago or '-' }} </strong>
+        </div>
+
+        <div>
+          <span>Banco</span>
+          <strong> {{ gestion_sp.banco_pago or '-' }} </strong>
+        </div>
+
+        <div>
+          <span>Fecha</span>
+          <strong> {{ gestion_sp.fecha_pago or '-' }} </strong>
+        </div>
+
+        <div>
+          <span>Monto</span>
+          <strong>
+            S/ {{ '%.2f'|format(gestion_sp.monto_pagado or 0) }}
+          </strong>
+        </div>
+
+        <div>
+          <span>N° operación / referencia</span>
+          <strong> {{ gestion_sp.nro_operacion or '-' }} </strong>
+        </div>
+      </div>
+
+      {% if gestion_sp.nombre_archivo_pago %}
+
+      <div class="topgap">
+        <strong>Comprobante de pago</strong>
+
+        <div class="muted">{{ gestion_sp.nombre_original_pago }}</div>
+
+        <div class="topgap" style="display: flex; gap: 8px; flex-wrap: wrap">
+          <a
+            href="{{ url_for(
+        'view_sp_payment_receipt',
+        tid=t.id
+      ) }}"
+            target="_blank"
+            class="btn"
+          >
+            <i class="fa-solid fa-eye"></i>
+            Visualizar
+          </a>
+
+          <a
+            href="{{ url_for(
+        'download_sp_payment_receipt',
+        tid=t.id
+      ) }}"
+            class="btn"
+          >
+            <i class="fa-solid fa-download"></i>
+            Descargar
+          </a>
+        </div>
+      </div>
+
+      {% endif %}
+    </div>
+
+    {% endif %}
+
+    {% if t.estado != 'Pendiente de aprobación' %}
+    <div class="card">
+      <h3>Estado de la solicitud</h3>
+
+      {% if t.estado == 'Pendiente asignación de pago' %}
+
+      <p>
+        <strong> ✓ V°B° de oficina completados </strong>
+      </p>
+
+      <p class="muted">
+        La solicitud está pendiente de revisión por Gerencia General para
+        asignar quién realizará el pago.
+      </p>
+
+      {% if user.username|lower == 'lneyra' %}
+
+      <div class="topgap">
+        <p>
+          <strong> ¿Quién realizará el pago? </strong>
+        </p>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap">
+          <form
+            method="post"
+            action="{{ url_for(
+        'assign_sp_payment',
+        tid=t.id
+      ) }}"
+          >
+            <input type="hidden" name="asignado_pago" value="Tesorería" />
+
+            <button type="submit" class="btn primary">
+              <i class="fa-solid fa-building-columns"></i>
+              Asignar a Tesorería
+            </button>
+          </form>
+
+          <form
+            method="post"
+            action="{{ url_for(
+        'assign_sp_payment',
+        tid=t.id
+      ) }}"
+          >
+            <input
+              type="hidden"
+              name="asignado_pago"
+              value="Gerencia General"
+            />
+
+            <button type="submit" class="btn">
+              <i class="fa-solid fa-user-check"></i>
+              Lo pagaré yo
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {% endif %} {% elif t.estado == 'Asignada a Tesorería' %}
+
+      <p>
+        <strong> Pago asignado a Tesorería </strong>
+      </p>
+
+      <p class="muted">La solicitud está pendiente de pago por Tesorería.</p>
+
+      {% if user.username|lower == 'ycoronado' %}
+
+      <div class="flash info topgap">
+        <strong>Acción requerida:</strong>
+
+        revisa el expediente completo y registra el pago.
+      </div>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Solicitud</span>
+
+          <strong> {{ t.tracking }} </strong>
+        </div>
+
+        <div>
+          <span>Beneficiario</span>
+
+          <strong> {{ t.beneficiario }} </strong>
+        </div>
+
+        <div>
+          <span>Monto</span>
+
+          <strong> S/ {{ '%.2f'|format(t.abono or 0) }} </strong>
+        </div>
+      </div>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for(
+    'register_sp_payment',
+    tid=t.id
+  ) }}"
+      >
+        <div class="formgrid">
+          <div class="field">
+            <label> Medio de pago * </label>
+
+            <select name="medio_pago" required>
+              <option value="">Seleccione</option>
+
+              <option value="Transferencia">Transferencia</option>
+
+              <option value="Depósito">Depósito</option>
+
+              <option value="Efectivo">Efectivo</option>
+
+              <option value="Yape">Yape</option>
+
+              <option value="Plin">Plin</option>
+
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label> Banco </label>
+
+            <input type="text" name="banco_pago" placeholder="Ej. BCP" />
+          </div>
+
+          <div class="field">
+            <label> Fecha del pago * </label>
+
+            <input
+              type="date"
+              name="fecha_pago"
+              value="{{ fecha_hoy }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> Monto pagado * </label>
+
+            <input
+              type="text"
+              name="monto_pagado"
+              class="money-input"
+              value="{{ '%.2f'|format(t.abono or 0) }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> N° operación / referencia </label>
+
+            <input type="text" name="nro_operacion" placeholder="Opcional" />
+          </div>
+
+          <div class="field">
+            <label>Evidencias del pago *</label>
+
+            <div class="sp-evidence-list">
+              <div class="sp-evidence-row">
+                <input
+                  type="file"
+                  name="comprobante_pago"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  required
+                />
+
+                <button
+                  type="button"
+                  class="btn"
+                  onclick="removeSpEvidence(this)"
+                >
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn topgap"
+              onclick="addSpEvidence(this)"
+            >
+              <i class="fa-solid fa-plus"></i>
+              Agregar otra evidencia
+            </button>
+
+            <small class="muted">
+              Puedes adjuntar uno o varios PDF o imágenes.
+            </small>
+          </div>
+        </div>
+
+        <button type="submit" class="btn primary topgap">
+          <i class="fa-solid fa-check"></i>
+
+          Registrar pago
+        </button>
+      </form>
+
+      {% endif %} {% elif t.estado == 'Asignada a Gerencia General' %}
+
+      <p>
+        <strong> Pago asignado a Gerencia General </strong>
+      </p>
+
+      <p class="muted">Gerencia General realizará el pago.</p>
+
+      {% if user.username|lower == 'lneyra' or user.username|lower ==
+      'ogonzales' %}
+
+      <div class="flash info topgap">
+        <strong>Acción requerida:</strong>
+
+        registra el pago y adjunta el comprobante.
+      </div>
+
+      <div class="purchase-summary">
+        <div>
+          <span>Solicitud</span>
+
+          <strong> {{ t.tracking }} </strong>
+        </div>
+
+        <div>
+          <span>Beneficiario</span>
+
+          <strong> {{ t.beneficiario }} </strong>
+        </div>
+
+        <div>
+          <span>Monto</span>
+
+          <strong> S/ {{ '%.2f'|format(t.abono or 0) }} </strong>
+        </div>
+      </div>
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for(
+    'register_sp_payment',
+    tid=t.id
+  ) }}"
+      >
+        <div class="formgrid">
+          <div class="field">
+            <label> Medio de pago * </label>
+
+            <select name="medio_pago" required>
+              <option value="">Seleccione</option>
+
+              <option value="Transferencia">Transferencia</option>
+
+              <option value="Depósito">Depósito</option>
+
+              <option value="Efectivo">Efectivo</option>
+
+              <option value="Yape">Yape</option>
+
+              <option value="Plin">Plin</option>
+
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label> Banco </label>
+
+            <input type="text" name="banco_pago" placeholder="Ej. BCP" />
+          </div>
+
+          <div class="field">
+            <label> Fecha del pago * </label>
+
+            <input
+              type="date"
+              name="fecha_pago"
+              value="{{ fecha_hoy }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> Monto pagado * </label>
+
+            <input
+              type="text"
+              name="monto_pagado"
+              class="money-input"
+              value="{{ '%.2f'|format(t.abono or 0) }}"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label> N° operación / referencia </label>
+
+            <input type="text" name="nro_operacion" placeholder="Opcional" />
+          </div>
+
+          <div class="field">
+            <label>Evidencias del pago *</label>
+
+            <div class="sp-evidence-list">
+              <div class="sp-evidence-row">
+                <input
+                  type="file"
+                  name="comprobante_pago"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  required
+                />
+
+                <button
+                  type="button"
+                  class="btn"
+                  onclick="removeSpEvidence(this)"
+                >
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn topgap"
+              onclick="addSpEvidence(this)"
+            >
+              <i class="fa-solid fa-plus"></i>
+              Agregar otra evidencia
+            </button>
+
+            <small class="muted">
+              Puedes adjuntar uno o varios PDF o imágenes.
+            </small>
+          </div>
+        </div>
+
+        <button type="submit" class="btn primary topgap">
+          <i class="fa-solid fa-check"></i>
+
+          Registrar pago
+        </button>
+      </form>
+
+      {% endif %} {% elif t.estado == 'Pagada pendiente conformidad GG' %}
+
+      <p>
+        <strong> ✓ Pago registrado </strong>
+      </p>
+
+      {% if archivos_pago_sp %}
+
+      <div class="topgap">
+        <h4>Evidencias del pago</h4>
+
+        <div class="attachments-list">
+
+          {% for archivo in archivos_pago_sp %}
+
+          <div class="attachment-item">
+
+            <div class="attachment-info">
+
+              <div class="attachment-icon">
+                <i class="fa-regular fa-file"></i>
+              </div>
+
+              <div>
+                <strong>{{ archivo.nombre_original }}</strong>
+
+                <div class="muted">
+                  Evidencia de pago
+                </div>
+              </div>
+
+            </div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+
+              <a
+                href="{{ url_for('view_sp_payment_file', aid=archivo.id) }}"
+                target="_blank"
+                class="btn"
+              >
+                <i class="fa-solid fa-eye"></i>
+                Visualizar
+              </a>
+
+              <a
+                href="{{ url_for('download_sp_payment_file', aid=archivo.id) }}"
+                class="btn"
+              >
+                <i class="fa-solid fa-download"></i>
+                Descargar
+              </a>
+
+            </div>
+
+          </div>
+
+          {% endfor %}
+
+        </div>
+      </div>
+
+      {% endif %}
+
+      <p class="muted">
+        La solicitud está pendiente de conformidad final de Gerencia General.
+      </p>
+
+      {% if user.username|lower == 'lneyra' or user.username|lower ==
+      'ogonzales' %}
+
+      <div class="topgap">
+        <div class="flash info">
+          <strong>Revisión final:</strong>
+
+          verifica el expediente y el comprobante de pago antes de finalizar la
+          solicitud.
+        </div>
+
+        <form
+          method="post"
+          action="{{ url_for(
+      'confirm_sp_payment',
+      tid=t.id
+    ) }}"
+          class="topgap"
+        >
+          <button
+            type="submit"
+            class="btn primary"
+            onclick="
+              return confirm(
+                '¿Confirmas que revisaste el pago y deseas finalizar esta solicitud?',
+              );
+            "
+          >
+            <i class="fa-solid fa-circle-check"></i>
+
+            Dar conformidad y finalizar
+          </button>
+        </form>
+      </div>
+
+      {% endif %} {% elif t.estado == 'Finalizada' %}
+
+      <p>
+        <strong> ✓ Solicitud finalizada </strong>
+      </p>
+
+      {% if gestion_sp and gestion_sp.conformidad_gg %}
+
+      <p class="muted">
+        Pago registrado y revisado por Gerencia General. {% if
+        gestion_sp.fecha_conformidad %}
+
+        <br />
+
+        Conformidad: {{ gestion_sp.fecha_conformidad }} {% endif %}
+      </p>
+
+      {% endif %} {% else %}
+
+      <p>{{ t.estado }}</p>
+
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% endif %}
+  </div>
+
+  <!-- ==========================================
+       REEMBOLSO PENDIENTE - TESORERÍA
+  =========================================== -->
+
+  {% if t.tipo == 'REQ' and ( user.username|lower == 'ycoronado' or
+  user.username|lower == 'ogonzales' ) %} {% set solicitud_reembolso =
+  namespace(item=None) %} {% for solicitud in tesoreria %} {% if
+  solicitud.estado == 'Pendiente' and solicitud.origen == 'REQ-Reembolso' and
+  solicitud_reembolso.item == None %} {% set solicitud_reembolso.item =
+  solicitud %} {% endif %} {% endfor %} {% if solicitud_reembolso.item %}
+
+  <div class="card stage-card">
+    <span class="stage-label"> TESORERÍA </span>
+
+    <h3>Reembolso pendiente</h3>
+
+    <div class="flash info">
+      <strong>Acción requerida:</strong>
+      Logística realizó una compra con dinero personal. Debes registrar el
+      reembolso.
+    </div>
+
+    <div class="purchase-summary">
+      <div>
+        <span>Requerimiento</span>
+
+        <strong> {{ t.tracking }} </strong>
+      </div>
+
+      <div>
+        <span>Monto a reembolsar</span>
+
+        <strong>
+          S/ {{ '%.2f'|format( solicitud_reembolso.item.monto or 0 ) }}
+        </strong>
+      </div>
+
+      <div>
+        <span>Motivo</span>
+
+        <strong> {{ solicitud_reembolso.item.motivo }} </strong>
+      </div>
+    </div>
+
+    <form
+      method="post"
+      enctype="multipart/form-data"
+      action="{{ url_for(
+          'treasury_pay',
+          sid=solicitud_reembolso.item.id
+        ) }}"
+    >
+      <div class="formgrid">
+        <div class="field">
+          <label> Medio de pago * </label>
+
+          <select name="medio_pago" required>
+            <option value="">Seleccione</option>
+
+            <option value="Transferencia">Transferencia</option>
+
+            <option value="Depósito">Depósito</option>
+
+            <option value="Efectivo">Efectivo</option>
+
+            <option value="Yape">Yape</option>
+
+            <option value="Plin">Plin</option>
+
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label> Banco </label>
+
+          <input type="text" name="banco" placeholder="Ej. BCP" />
+        </div>
+
+        <div class="field">
+          <label> Fecha del reembolso * </label>
+
+          <input
+            type="date"
+            name="fecha_pago"
+            value="{{ fecha_hoy }}"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label> Monto reembolsado * </label>
+
+          <input
+            type="text"
+            name="monto"
+            class="money-input"
+            value="{{ '%.2f'|format(
+                solicitud_reembolso.item.monto or 0
+              ) }}"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label> N° operación / referencia </label>
+
+          <input type="text" name="nro_operacion" placeholder="Opcional" />
+        </div>
+
+        <div class="field">
+          <label> Comprobante del reembolso * </label>
+
+          <input
+            type="file"
+            name="comprobante_pago"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            required
+          />
+
+          <small class="muted">
+            Debes adjuntar el comprobante antes de registrar el reembolso.
+          </small>
+        </div>
+      </div>
+
+      <button type="submit" class="btn primary topgap">
+        <i class="fa-solid fa-check"></i>
+
+        Registrar reembolso
+      </button>
+    </form>
+  </div>
+  {% endif %} {% endif %} {% if t.estado != 'Pendiente de mi revisión' %}
+  <div class="card">
+    <h3>Seguimiento</h3>
+    <p class="muted">Paso a paso de las acciones principales del trámite.</p>
+
+    {% for h in history %}
+      {% if 'Trámite modificado' not in h.accion and 'modificado durante la revisión' not in h.accion %}
+    <div class="history">
+      <span>{{ h.fecha }}</span>
+
+      <strong>{{ h.nombre }}</strong>
+
+      <span>
+      {% if 'Requerimiento registrado:' in h.accion %}
+        Requerimiento registrado en obra.
+      {% elif 'Solicitud registrada:' in h.accion %}
+        Solicitud registrada en obra.
+      {% elif 'Revisión final completada' in h.accion or 'Visto bueno:' in h.accion %}
+        {% if h.nombre == 'Artidoro Moreno' %}
+          Gerencia de Obra dio visto bueno.
+        {% elif h.nombre == 'José Luis Becerra' %}
+          Control y Planeamiento dio visto bueno.
+        {% else %}
+          Dio visto bueno.
+        {% endif %}
+      {% elif 'Requerimiento recibido por Logística' in h.accion %}
+        Logística recibió el requerimiento.
+      {% elif 'Compra registrada por Logística' in h.accion %}
+        Logística registró la compra del requerimiento.
+      {% elif 'Material enviado a obra' in h.accion %}
+        Logística envió los materiales a obra.
+      {% elif 'Recepción confirmada en obra' in h.accion %}
+        Obra confirmó la recepción de los materiales.
+      {% elif 'Pago de solicitud registrado' in h.accion or 'Pago registrado por Tesorería' in h.accion %}
+        Se registró el pago de la solicitud.
+      {% elif 'Conformidad' in h.accion and 'finalizada' in h.accion %}
+        Gerencia General dio conformidad final.
+      {% else %}
+        {{ h.accion }}
+      {% endif %}
+      </span>
+    </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- ==========================================
+     MODAL DE DETALLE COMPLETO
+=========================================== -->
+
+{% endif %}
+
+<div id="detailModal" class="modal-overlay hidden">
+  <div class="modal-window detail-modal-window">
+    <div class="modal-head">
+      <div>
+        <h3>Detalle completo</h3>
+        <p>{{ t.tracking }} · N° {{ t.numero }}</p>
+      </div>
+
+      <button type="button" class="modal-close" onclick="closeDetailModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="review-table-wrap">
+      {% if t.tipo == 'REQ' %}
+      <table class="req-review-table">
+        <thead>
+          <tr>
+            <th class="req-num">N°</th>
+            <th class="req-sec">Sección</th>
+            <th class="req-desc">Descripción</th>
+            <th class="req-cant">Cantidad</th>
+            <th class="req-und">Unidad</th>
+            <th class="req-stock">Stock</th>
+            <th class="req-just">Justificación</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in items %}
+          <tr>
+            <td class="req-num">
+              <span class="req-number">{{ "%02d"|format(loop.index) }}</span>
+            </td>
+            <td>
+              <span class="req-section-badge">{{ i.seccion }}</span>
+            </td>
+            <td>{{ i.descripcion }}</td>
+            <td>{{ i.cantidad }}</td>
+            <td>{{ i.unidad or '-' }}</td>
+            <td>{{ i.stock }}</td>
+            <td>
+              {% if i.justificacion %}
+                {{ i.justificacion }}
+              {% else %}
+                <span class="req-empty">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% else %}
+
+      <table class="review-detail-table">
+        <thead>
+          <tr>
+            <th class="col-item">Ítem</th>
+            <th class="col-description">Concepto</th>
+            <th class="col-data">Cantidad / Unidad</th>
+            <th class="col-just">Costo / Monto</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for i in items %}
+          <tr>
+            <td><span class="review-item-number">N° {{ i.nro }}</span></td>
+
+            <td>{{ i.descripcion }}</td>
+
+            <td>
+              <div class="review-mini-data">
+                <span><small>Cantidad</small>{{ i.cantidad }}</span>
+                <span><small>Unidad</small>{{ i.unidad or '-' }}</span>
+              </div>
+            </td>
+
+            <td>
+              <div class="review-mini-data">
+                <span><small>Costo unit.</small>S/ {{ "{:,.2f}".format(i.costo or 0) }}</span>
+                <span><small>Monto</small>S/ {{ "{:,.2f}".format(i.monto or 0) }}</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn" onclick="closeDetailModal()">
+        Cerrar
+      </button>
+
+      {% if t.estado == 'Pendiente de mi revisión' and t.creador == user.id %}
+      <button type="button" class="btn primary" onclick="openVbConfirm()">
+        <i class="fa-solid fa-check-double"></i>
+        Dar mi V°B° y enviar
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if t.tipo == 'REQ' %}
+
+<div id="reqModal" class="modal-overlay hidden">
+  <div class="modal-window req-modal-window">
+    <div class="modal-head">
+      <div>
+        <h3>Detalle del requerimiento</h3>
+        <p>{{ t.tracking }} · N° {{ t.numero }}</p>
+      </div>
+
+      <button type="button" class="modal-close" onclick="closeReqModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sección</th>
+            <th>Ítem</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Stock</th>
+            <th>A comprar</th>
+            <th>Justificación</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for i in items %}
+
+          <tr>
+            <td>{{ i.seccion }}</td>
+            <td>{{ i.nro }}</td>
+            <td>{{ i.descripcion }}</td>
+            <td>{{ i.cantidad }}</td>
+            <td>{{ i.unidad }}</td>
+            <td>{{ i.stock }}</td>
+            <td>{{ i.comprar }}</td>
+            <td>{{ i.justificacion }}</td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-actions">
+      <a
+        class="btn"
+        href="{{ url_for('view_requirement_pdf', tid=t.id) }}"
+        target="_blank"
+      >
+        <i class="fa-regular fa-file-pdf"></i>
+        Visualizar PDF
+      </a>
+
+      <button type="button" class="btn primary" onclick="closeReqModal()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% if t.estado == 'Pendiente de mi revisión' and t.creador == user.id %}
+<div id="vbConfirmModal" class="vb-confirm-overlay hidden" onclick="vbBackdropClose(event)">
+  <div class="vb-confirm-box" role="dialog" aria-modal="true" aria-labelledby="vbConfirmTitle">
+    <div class="vb-confirm-body">
+      <div class="vb-confirm-icon">
+        <i class="fa-solid fa-check-double"></i>
+      </div>
+      <h3 id="vbConfirmTitle">¿Dar visto bueno y enviar?</h3>
+      <p>Confirma que revisaste la información del trámite N° {{ t.numero }}. Al continuar, el trámite será enviado al siguiente paso.</p>
+    </div>
+
+    <div class="vb-confirm-actions">
+      <button type="button" class="btn" onclick="closeVbConfirm()">Cancelar</button>
+      <form method="post" action="{{ url_for('creator_approve', tid=t.id) }}">
+        <button type="submit" class="btn primary">
+          <i class="fa-solid fa-check"></i>
+          Sí, enviar
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function openVbConfirm(){
+  const modal=document.getElementById('vbConfirmModal');
+  if(!modal) return;
+  modal.classList.remove('hidden');
+  document.body.style.overflow='hidden';
+}
+function closeVbConfirm(){
+  const modal=document.getElementById('vbConfirmModal');
+  if(!modal) return;
+  modal.classList.add('hidden');
+  document.body.style.overflow='';
+}
+function vbBackdropClose(event){
+  if(event.target.id==='vbConfirmModal') closeVbConfirm();
+}
+document.addEventListener('keydown',function(event){
+  if(event.key==='Escape') closeVbConfirm();
+});
+</script>
+
+
+<script>
+  (function () {
+    var purchaseCounter = 0;
+
+    window.addPurchaseReceipt = function () {
+      var container = document.getElementById("purchaseReceipts");
+      if (!container) return;
+
+      purchaseCounter += 1;
+
+      var row = document.createElement("div");
+      row.className = "purchase-receipt-row";
+
+      row.innerHTML =
+        '<div class="purchase-receipt-num">' + purchaseCounter + '</div>' +
+        '<div class="field">' +
+          '<label>Fecha *</label>' +
+          '<input type="date" name="fecha_compra[]" value="{{ fecha_hoy }}" required>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label>Tipo *</label>' +
+          '<select name="tipo_comprobante[]" required>' +
+            '<option value="Factura">Factura</option>' +
+            '<option value="Boleta">Boleta</option>' +
+            '<option value="Otro">Otro</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label>N° comprobante *</label>' +
+          '<input name="nro_comprobante[]" placeholder="Ej.: E001-169" required>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label>Monto *</label>' +
+          '<input type="number" step="0.01" min="0.01" name="monto[]" placeholder="0.00" required>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label>Evidencia *</label>' +
+          '<input type="file" name="comprobante[]" accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" required>' +
+        '</div>' +
+        '<button type="button" class="purchase-remove" title="Eliminar comprobante">' +
+          '<i class="fa-solid fa-xmark"></i>' +
+        '</button>';
+
+      row.querySelector(".purchase-remove").addEventListener("click", function () {
+        row.remove();
+        renumberPurchaseReceipts();
+        updatePurchaseTotal();
+      });
+
+      row.querySelector('[name="monto[]"]').addEventListener("input", updatePurchaseTotal);
+
+      var fileInput = row.querySelector('[name="comprobante[]"]');
+      if (fileInput) {
+        fileInput.title = "Adjunta una factura, foto, PDF o XML como evidencia.";
+      }
+
+      container.appendChild(row);
+      renumberPurchaseReceipts();
+      updatePurchaseTotal();
+    };
+
+    function renumberPurchaseReceipts() {
+      var rows = document.querySelectorAll("#purchaseReceipts .purchase-receipt-row");
+      rows.forEach(function (row, index) {
+        var number = row.querySelector(".purchase-receipt-num");
+        if (number) number.textContent = index + 1;
+      });
+      purchaseCounter = rows.length;
+    }
+
+    function updatePurchaseTotal() {
+      var total = 0;
+
+      document.querySelectorAll('#purchaseReceipts [name="monto[]"]').forEach(function (input) {
+        total += parseFloat(input.value) || 0;
+      });
+
+      var output = document.getElementById("purchaseGrandTotal");
+      if (output) {
+        output.textContent = "S/ " + total.toFixed(2);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      var container = document.getElementById("purchaseReceipts");
+
+      if (container && container.children.length === 0) {
+        window.addPurchaseReceipt();
+      }
+    });
+  })();
+</script>
+
+{% endblock %}

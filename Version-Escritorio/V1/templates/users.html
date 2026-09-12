@@ -1,0 +1,248 @@
+{% extends 'base.html' %} {% block title %} Administrar usuarios | LANR {%
+endblock %} {% block content %}
+
+<div class="pagehead">
+  <div>
+    <h1>Administrar usuarios</h1>
+    <p>Gestiona los datos de las cuentas internas del sistema.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Usuario</th>
+          <th>Correo</th>
+          <th>Teléfono</th>
+          <th>Rol / Área</th>
+          <th>Estado</th>
+          <th>Acción</th>
+          <th>Contraseña</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for u in users %}
+
+        <tr>
+          <!-- NOMBRE -->
+          <td>
+            <input
+              type="text"
+              name="full_name"
+              value="{{ u.full_name }}"
+              form="edit-user-{{ u.id }}"
+              required
+            />
+          </td>
+
+          <!-- USUARIO -->
+          <td>
+            <input
+              type="text"
+              name="username"
+              value="{{ u.username }}"
+              form="edit-user-{{ u.id }}"
+              autocomplete="off"
+              spellcheck="false"
+              autocapitalize="none"
+              required
+            />
+          </td>
+
+          <!-- CORREO -->
+          <td>
+            <input
+              type="email"
+              name="email"
+              value="{{ u.email or '' }}"
+              placeholder="correo@empresa.com"
+              form="edit-user-{{ u.id }}"
+            />
+          </td>
+
+          <!-- TELÉFONO -->
+          <td>
+            <input
+              type="tel"
+              name="phone"
+              value="{{ u.phone or '' }}"
+              placeholder="999 999 999"
+              form="edit-user-{{ u.id }}"
+            />
+          </td>
+
+          <!-- ROL -->
+          <td>
+            <select name="role" form="edit-user-{{ u.id }}" required>
+              <option
+                value="Gerencia de Obra"
+                {%
+                if
+                u.role=""
+                ="Gerencia de Obra"
+                %}selected{%
+                endif
+                %}
+              >
+                Gerencia de Obra
+              </option>
+
+              <option
+                value="Control y Planeamiento"
+                {%
+                if
+                u.role=""
+                ="Control y Planeamiento"
+                %}selected{%
+                endif
+                %}
+              >
+                Control y Planeamiento
+              </option>
+
+              <option
+                value="Gerencia General"
+                {%
+                if
+                u.role=""
+                ="Gerencia General"
+                %}selected{%
+                endif
+                %}
+              >
+                Gerencia General
+              </option>
+
+              <option
+                value="Administración"
+                {%
+                if
+                u.role=""
+                ="Administración"
+                %}selected{%
+                endif
+                %}
+              >
+                Administración
+              </option>
+
+              <option
+                value="Logística"
+                {%
+                if
+                u.role=""
+                ="Logística"
+                %}selected{%
+                endif
+                %}
+              >
+                Logística
+              </option>
+
+              <option
+                value="Tesorería"
+                {%
+                if
+                u.role=""
+                ="Tesorería"
+                %}selected{%
+                endif
+                %}
+              >
+                Tesorería
+              </option>
+
+              <option
+                value="Sistemas"
+                {%
+                if
+                u.role=""
+                ="Sistemas"
+                %}selected{%
+                endif
+                %}
+              >
+                Sistemas
+              </option>
+            </select>
+          </td>
+
+          <!-- ESTADO -->
+          <td>
+            <form
+              method="post"
+              action="{{ url_for('toggle_user_status', uid=u.id) }}"
+            >
+              {% if u.active %}
+
+              <button type="submit" class="btn">Desactivar</button>
+
+              {% else %}
+
+              <button type="submit" class="btn primary">Activar</button>
+
+              {% endif %}
+            </form>
+          </td>
+
+          <!-- GUARDAR DATOS -->
+          <td>
+            <form
+              id="edit-user-{{ u.id }}"
+              method="post"
+              action="{{ url_for('edit_user', uid=u.id) }}"
+            ></form>
+
+            <button
+              type="submit"
+              class="btn primary"
+              form="edit-user-{{ u.id }}"
+            >
+              <i class="fa-solid fa-floppy-disk"></i>
+              Guardar
+            </button>
+          </td>
+
+          <!-- CONTRASEÑA -->
+          <td>
+            <form
+              method="post"
+              action="{{ url_for('reset_user_password', uid=u.id) }}"
+            >
+              <input
+                type="password"
+                name="nueva_password"
+                placeholder="Nueva contraseña"
+                minlength="8"
+                autocomplete="new-password"
+                required
+              />
+
+              <input
+                type="password"
+                name="confirmar_password"
+                placeholder="Confirmar contraseña"
+                minlength="8"
+                autocomplete="new-password"
+                required
+              />
+
+              <button type="submit" class="btn">
+                <i class="fa-solid fa-key"></i>
+                Restablecer
+              </button>
+            </form>
+          </td>
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

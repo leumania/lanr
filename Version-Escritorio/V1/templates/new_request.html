@@ -1,0 +1,510 @@
+{% extends 'base.html' %} {% block title %} Nuevo trámite | LANR {% endblock %}
+{% block content %}
+
+<div class="pagehead">
+  <div>
+    <h1>Nuevo trámite</h1>
+    <p>Selecciona el tipo de trámite que deseas registrar.</p>
+  </div>
+</div>
+
+<!-- =========================
+     SELECTOR DE TRÁMITE
+========================= -->
+
+<div class="tramite-selector">
+  <button
+    type="button"
+    class="tramite-option"
+    id="optionReq"
+    onclick="showForm('req')"
+  >
+    <div class="tramite-option-icon req-icon">
+      <i class="fa-solid fa-box-open"></i>
+    </div>
+
+    <div class="tramite-option-text">
+      <strong>Requerimiento de materiales</strong>
+      <span>Registra materiales para ejecución de obra o seguridad.</span>
+    </div>
+
+    <i class="fa-solid fa-chevron-right tramite-arrow"></i>
+  </button>
+
+  <button
+    type="button"
+    class="tramite-option"
+    id="optionSp"
+    onclick="showForm('sp')"
+  >
+    <div class="tramite-option-icon sp-icon">
+      <i class="fa-regular fa-credit-card"></i>
+    </div>
+
+    <div class="tramite-option-text">
+      <strong>Solicitud de pago</strong>
+      <span>Registra pagos de planilla o a personas y empresas.</span>
+    </div>
+
+    <i class="fa-solid fa-chevron-right tramite-arrow"></i>
+  </button>
+</div>
+
+<!-- ========================================================
+     REQUERIMIENTO
+========================================================= -->
+
+<form
+  id="reqForm"
+  class="card tramite-form hidden"
+  method="post"
+  action='{{ url_for("create_requirement") }}'
+>
+  <div class="form-section-header">
+    <div class="section-heading-icon req-icon">
+      <i class="fa-solid fa-box-open"></i>
+    </div>
+
+    <div>
+      <h2>Requerimiento de materiales</h2>
+
+      <p>
+        Completa la información para generar el requerimiento y su seguimiento.
+      </p>
+    </div>
+  </div>
+
+  <!-- DATOS GENERALES -->
+
+  <div class="form-section">
+    <div class="form-section-title">
+      <span>Datos generales</span>
+    </div>
+
+    <div class="formgrid">
+      <div class="field">
+        <label>
+          N°
+          <span class="required">*</span>
+        </label>
+
+        <input
+          name="numero"
+          required
+          placeholder="Ingrese N° de requerimiento"
+          oninput="updateFormat(this.value)"
+        />
+
+        <small class="field-help">Ej.: 01-2026</small>
+      </div>
+
+      <div class="field">
+        <label>
+          Fecha de solicitud
+          <span class="required">*</span>
+        </label>
+
+        <input type="date" name="fecha" required />
+      </div>
+
+      <div class="field full">
+        <label>Nombre del proyecto</label>
+
+        <textarea class="readonly-field" readonly>{{ project }}</textarea>
+      </div>
+
+      <div class="field full">
+        <label>Lugar</label>
+
+        <input class="readonly-field" readonly value="{{ place }}" />
+      </div>
+    </div>
+  </div>
+
+  <!-- TIPO -->
+
+  <div class="form-section">
+    <div class="form-section-title">
+      <span>Tipo de requerimiento</span>
+      <small>Puedes seleccionar uno o ambos.</small>
+    </div>
+
+    <div class="req-options">
+      <label class="req-check">
+        <input type="checkbox" onchange="toggleReq('ejec', this.checked)" />
+
+        <div class="req-check-content">
+          <div class="req-check-icon">
+            <i class="fa-solid fa-helmet-safety"></i>
+          </div>
+
+          <div>
+            <strong>Ejecución de obra</strong>
+            <span>Materiales requeridos para ejecución.</span>
+          </div>
+        </div>
+      </label>
+
+      <label class="req-check">
+        <input type="checkbox" onchange="toggleReq('seg', this.checked)" />
+
+        <div class="req-check-content">
+          <div class="req-check-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+
+          <div>
+            <strong>Ing. de seguridad</strong>
+            <span>Materiales e implementos de seguridad.</span>
+          </div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <!-- EJECUCIÓN -->
+
+  <div id="sec-ejec" class="subsection hidden">
+    <div class="detail-header">
+      <div>
+        <h3>Ejecución de obra</h3>
+        <p>Detalle de materiales solicitados.</p>
+      </div>
+
+      <button
+        type="button"
+        class="btn add-item-btn"
+        onclick="addReqRow('body-ejec', 'Ejecución de obra')"
+      >
+        <i class="fa-solid fa-plus"></i>
+        Agregar ítem
+      </button>
+    </div>
+
+    <div class="tablewrap detail-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Ítem</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Stock</th>
+            <th>A comprar</th>
+            <th>Justificación</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody id="body-ejec"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SEGURIDAD -->
+
+  <div id="sec-seg" class="subsection hidden">
+    <div class="detail-header">
+      <div>
+        <h3>Ing. de seguridad</h3>
+        <p>Detalle de materiales o implementos solicitados.</p>
+      </div>
+
+      <button
+        type="button"
+        class="btn add-item-btn"
+        onclick="addReqRow('body-seg', 'Ing. de seguridad')"
+      >
+        <i class="fa-solid fa-plus"></i>
+        Agregar ítem
+      </button>
+    </div>
+
+    <div class="tablewrap detail-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Ítem</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Stock</th>
+            <th>A comprar</th>
+            <th>Justificación</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody id="body-seg"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CÓDIGOS -->
+
+  <div class="form-section">
+    <div class="form-section-title">
+      <span>Identificación del trámite</span>
+    </div>
+
+    <div class="formgrid">
+      <div class="field">
+        <label>Código de formato</label>
+
+        <input
+          id="formatCode"
+          class="readonly-field"
+          readonly
+          value="F01A-LANR-"
+        />
+      </div>
+
+      <div class="field">
+        <label>Código de seguimiento</label>
+
+        <input
+          class="readonly-field"
+          readonly
+          value="Se genera automáticamente al registrar"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTONES -->
+
+  <div class="form-actions">
+    <button type="submit" class="btn primary submit-tramite">
+      <i class="fa-solid fa-check"></i>
+      Registrar requerimiento
+    </button>
+  </div>
+</form>
+
+<!-- ========================================================
+     SOLICITUD DE PAGO
+========================================================= -->
+
+<form
+  id="spForm"
+  class="card tramite-form hidden"
+  method="post"
+  enctype="multipart/form-data"
+  action='{{ url_for("create_payment_request") }}'
+>
+  <div class="form-section-header">
+    <div class="section-heading-icon sp-icon">
+      <i class="fa-regular fa-credit-card"></i>
+    </div>
+
+    <div>
+      <h2>Solicitud de pago</h2>
+
+      <p>
+        Selecciona el tipo de solicitud y completa la información
+        correspondiente.
+      </p>
+    </div>
+  </div>
+
+  <!-- TIPO -->
+
+  <div class="form-section">
+    <div class="field">
+      <label>
+        Tipo de solicitud
+        <span class="required">*</span>
+      </label>
+
+      <select name="subtipo" onchange="toggleSP(this.value)" required>
+        <option value="">Selecciona una opción...</option>
+        <option value="Planilla">Pago de planilla</option>
+        <option value="Persona/Empresa">Persona o empresa</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- DATOS -->
+
+  <div id="spCommon" class="hidden">
+    <div class="form-section">
+      <div class="form-section-title">
+        <span>Datos de la solicitud</span>
+      </div>
+
+      <div class="formgrid">
+        <div class="field">
+          <label>
+            N°
+            <span class="required">*</span>
+          </label>
+
+          <input
+            name="numero"
+            required
+            placeholder="Ingrese N° de solicitud"
+            oninput="updateFormat(this.value)"
+          />
+
+          <small class="field-help">Ej.: 2026-01</small>
+        </div>
+
+        <div class="field">
+          <label>
+            Fecha
+            <span class="required">*</span>
+          </label>
+
+          <input type="date" name="fecha" required />
+        </div>
+
+        <div class="field">
+          <label>
+            Beneficiario
+            <span class="required">*</span>
+          </label>
+
+          <input
+            name="beneficiario"
+            required
+            placeholder="Nombre de persona o empresa"
+          />
+        </div>
+
+        <div class="field">
+          <label>DNI / RUC</label>
+
+          <input name="dni_ruc" placeholder="Opcional" />
+        </div>
+
+        <div class="field">
+          <label>Modalidad de pago</label>
+
+          <input
+            name="modalidad_pago"
+            placeholder="Ingrese modalidad de pago"
+          />
+        </div>
+
+        <!-- PLANILLA -->
+
+        <div class="field planOnly">
+          <label>Responsable</label>
+
+          <input name="responsable" placeholder="Opcional" />
+        </div>
+
+        <!-- PERSONA / EMPRESA -->
+
+        <div class="field thirdOnly hidden">
+          <label>Tipo de comprobante</label>
+
+          <input name="tipo_comprobante" placeholder="Factura / Boleta / RH" />
+        </div>
+
+        <div class="field thirdOnly hidden">
+          <label>Banco</label>
+
+          <input name="banco" placeholder="Entidad bancaria" />
+        </div>
+
+        <div class="field thirdOnly hidden">
+          <label>N° comprobante</label>
+
+          <input name="nro_comprobante" placeholder="Número de comprobante" />
+        </div>
+
+        <div class="field thirdOnly hidden">
+          <label>Cuenta / CCI</label>
+
+          <input name="cuenta_cci" placeholder="Cuenta bancaria" />
+        </div>
+      </div>
+    </div>
+
+    <!-- DETALLE -->
+
+    <div class="form-section">
+      <div class="detail-header">
+        <div>
+          <h3>Detalle</h3>
+
+          <p>Agrega los conceptos incluidos en la solicitud.</p>
+        </div>
+
+        <button type="button" class="btn add-item-btn" onclick="addSPRow()">
+          <i class="fa-solid fa-plus"></i>
+          Agregar ítem
+        </button>
+      </div>
+
+      <div class="tablewrap detail-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Ítem</th>
+              <th>Concepto</th>
+              <th>Unidad</th>
+              <th>Cantidad</th>
+              <th>Costo unitario</th>
+              <th>Monto</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody id="spBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- OBSERVACIONES -->
+
+    <div class="form-section">
+      <div class="field">
+        <label>Observaciones</label>
+
+        <textarea
+          name="observaciones"
+          placeholder="Agrega alguna observación si corresponde..."
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- DOCUMENTOS ADJUNTOS -->
+
+    <div class="form-section">
+      <div class="form-section-title">
+        <span>Documentos adjuntos</span>
+
+        <small> Opcional · Puedes seleccionar varios PDF. </small>
+      </div>
+
+      <div class="field">
+        <label>Adjuntar documentos</label>
+
+        <input
+          type="file"
+          name="documentos"
+          accept=".pdf,application/pdf"
+          multiple
+        />
+
+        <small class="field-help">
+          Puedes adjuntar planillas, comprobantes, hojas de pago u otros
+          sustentos.
+        </small>
+      </div>
+    </div>
+
+    <!-- BOTONES -->
+
+    <div class="form-actions">
+      <button type="submit" class="btn primary submit-tramite">
+        <i class="fa-solid fa-check"></i>
+        Registrar solicitud
+      </button>
+    </div>
+  </div>
+</form>
+
+{% endblock %}

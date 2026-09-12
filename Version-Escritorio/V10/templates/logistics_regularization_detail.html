@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% block body_class %}page-logistics-regularization-detail{% endblock %}
+{% block title %}Regularización de compra | LANR{% endblock %}
+{% block content %}
+<div class="pagehead reg-detail-head">
+  <div>
+    <h1>Regularización de compra</h1>
+    <p>{{ t.tracking }} · N° {{ t.numero }}</p>
+  </div>
+
+  <a class="btn" href="{{ url_for('logistics_regularizations') }}">
+    <i class="fa-solid fa-arrow-left"></i>
+    Volver
+  </a>
+</div>
+
+<div class="card">
+  <div class="infogrid">
+    <div>
+      <span>Requerimiento</span>
+      <strong>{{ t.tracking }}</strong>
+    </div>
+
+    <div>
+      <span>Creado por</span>
+      <strong>{{ t.creador_nombre }}</strong>
+    </div>
+
+    <div>
+      <span>Estado del trámite</span>
+      <strong>{{ t.estado }}</strong>
+    </div>
+
+    <div>
+      <span>Regularización</span>
+      {% if regularizacion.estado == 'Regularizado' %}
+      <strong>
+        <span class="reg-status done">
+          <i class="fa-solid fa-check"></i>
+          Regularizado
+        </span>
+      </strong>
+      {% else %}
+      <strong>
+        <span class="reg-status pending">
+          <i class="fa-regular fa-clock"></i>
+          Pendiente
+        </span>
+      </strong>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card topgap">
+  <div class="reg-card-title">
+    <div>
+      <h3>Comprobantes registrados</h3>
+      <p class="muted">
+        Esta información proviene de la gestión de compra y no puede modificarse desde la regularización.
+      </p>
+    </div>
+  </div>
+
+  <div class="tablewrap">
+    <table class="reg-table reg-proof-table">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>N° comprobante</th>
+          <th>Monto</th>
+          <th>Evidencia</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for compra in compras %}
+        <tr>
+          <td>
+            <span class="reg-line-num">{{ loop.index }}</span>
+          </td>
+          <td class="reg-proof-static">{{ compra.fecha_compra }}</td>
+          <td class="reg-proof-static">{{ compra.tipo_comprobante }}</td>
+          <td class="reg-proof-static">{{ compra.nro_comprobante }}</td>
+          <td class="reg-proof-static">
+            <strong>S/ {{ '%.2f'|format(compra.monto or 0) }}</strong>
+          </td>
+          <td>
+            <a
+              class="btn small"
+              href="{{ url_for('view_purchase_file', pid=compra.id) }}"
+              target="_blank"
+            >
+              <i class="fa-regular fa-eye"></i>
+              Ver evidencia
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="reg-proof-total">
+    <span>Total de comprobantes</span>
+    <strong>S/ {{ '%.2f'|format(total_comprobantes or 0) }}</strong>
+  </div>
+</div>
+
+<div class="card topgap">
+  <div class="reg-card-title">
+    <div>
+      <h3>Detalle de productos</h3>
+
+      {% if regularizacion.estado == 'Pendiente' %}
+      <p class="muted">
+        Detalla los productos que conforman el importe de los comprobantes registrados.
+      </p>
+      {% else %}
+      <p class="muted">
+        Detalle registrado al completar la regularización.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if regularizacion.estado == 'Pendiente' %}
+  <form
+    id="regularizationForm" data-expected-total="{{ '%.2f'|format(total_comprobantes or 0) }}"
+    method="post"
+    action="{{ url_for('logistics_regularize_purchase', tid=t.id) }}"
+  >
+    <div class="reg-lines-wrap tablewrap">
+      <table class="reg-table reg-lines-table">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Descripción *</th>
+            <th>Cantidad *</th>
+            <th>Precio unitario *</th>
+            <th>Precio total</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody id="regularizationRows"></tbody>
+      </table>
+    </div>
+
+    <button
+      type="button"
+      class="btn reg-add-line"
+      onclick="addRegularizationRow()"
+    >
+      <i class="fa-solid fa-plus"></i>
+      Agregar producto
+    </button>
+
+    <div class="reg-bottom">
+      <div class="reg-note">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>
+          El total de los productos debe ser exactamente igual al total de los
+          comprobantes. Si no coincide, el sistema no permitirá completar la regularización.
+        </div>
+      </div>
+
+      <div class="reg-sum-box">
+        <div class="reg-sum-row">
+          <span>Total comprobantes</span>
+          <strong>S/ {{ '%.2f'|format(total_comprobantes or 0) }}</strong>
+        </div>
+
+        <div class="reg-sum-row">
+          <span>Total detallado</span>
+          <strong id="detailTotal">S/ 0.00</strong>
+        </div>
+
+        <div id="totalStatus" class="reg-sum-status bad">
+          Falta completar el detalle.
+        </div>
+      </div>
+    </div>
+
+    <button
+      id="completeRegularizationButton"
+      type="submit"
+      class="btn primary topgap"
+    >
+      <i class="fa-solid fa-check"></i>
+      Completar regularización
+    </button>
+  </form>
+
+  {% else %}
+
+  <div class="tablewrap">
+    <table class="reg-table reg-lines-table">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Descripción</th>
+          <th>Cantidad</th>
+          <th>Precio unitario</th>
+          <th>Precio total</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for detalle in detalles %}
+        <tr class="reg-completed-row">
+          <td>
+            <span class="reg-line-num">{{ loop.index }}</span>
+          </td>
+          <td>{{ detalle.descripcion }}</td>
+          <td>{{ detalle.cantidad }}</td>
+          <td>S/ {{ '%.2f'|format(detalle.precio_unitario or 0) }}</td>
+          <td>
+            <strong>S/ {{ '%.2f'|format(detalle.precio_total or 0) }}</strong>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="reg-bottom">
+    <div class="reg-note">
+      <i class="fa-solid fa-circle-check"></i>
+      <div>
+        Regularización completada
+        {% if regularizacion.fecha_regularizacion %}
+        el {{ regularizacion.fecha_regularizacion }}.
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="reg-sum-box">
+      <div class="reg-sum-row">
+        <span>Total comprobantes</span>
+        <strong>S/ {{ '%.2f'|format(total_comprobantes or 0) }}</strong>
+      </div>
+
+      <div class="reg-sum-row">
+        <span>Total detallado</span>
+        <strong>S/ {{ '%.2f'|format(total_detalle or 0) }}</strong>
+      </div>
+
+      <div class="reg-sum-status ok">
+        Los importes coinciden.
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+{% if regularizacion.estado == 'Pendiente' %}
+
+{% endif %}
+
+{% endblock %}

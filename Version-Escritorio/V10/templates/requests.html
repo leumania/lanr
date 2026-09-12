@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block body_class %}page-requests{% endblock %}
+{% block title %} Trámites | LANR {% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>Trámites</h1><p>Consulta y seguimiento de requerimientos y solicitudes de pago.</p></div></div>
+
+<div class="tramite-status-tabs" id="tramiteStatusTabs" aria-label="Estado de los trámites">
+ <button type="button" class="tramite-status-tab active" data-flujo="pendientes">
+  <i class="fa-regular fa-paper-plane"></i><span class="tramite-tab-text"><strong>Pendientes de enviar</strong><small>Mis trámites sin enviar</small></span><span class="tramite-tab-count" id="countPendientes">0</span>
+ </button>
+ <button type="button" class="tramite-status-tab" data-flujo="aprobar">
+  <i class="fa-regular fa-user"></i><span class="tramite-tab-text"><strong>Por aprobar</strong><small>Pendientes de V°B° en obra</small></span><span class="tramite-tab-count" id="countAprobar">0</span>
+ </button>
+ <button type="button" class="tramite-status-tab" data-flujo="proceso">
+  <i class="fa-solid fa-arrows-rotate"></i><span class="tramite-tab-text"><strong>En proceso</strong><small>En gestión de oficina</small></span><span class="tramite-tab-count" id="countProceso">0</span>
+ </button>
+ <button type="button" class="tramite-status-tab" data-flujo="finalizados">
+  <i class="fa-regular fa-circle-check"></i><span class="tramite-tab-text"><strong>Finalizados</strong><small>Trámites completados</small></span><span class="tramite-tab-count" id="countFinalizados">0</span>
+ </button>
+ <button type="button" class="tramite-status-tab" data-flujo="todos">
+  <i class="fa-solid fa-list"></i><span class="tramite-tab-text"><strong>Todos</strong><small>Todos los trámites visibles</small></span><span class="tramite-tab-count" id="countTodos">0</span>
+ </button>
+</div>
+
+<div class="card tramite-search-card">
+ <div class="tramite-search-grid-v2">
+  <div class="field"><label for="tramiteTipoV2">Tipo de trámite</label><select id="tramiteTipoV2"><option value="">Todos</option><option value="REQ">Requerimiento</option><option value="SP">Solicitud de pago</option></select></div>
+  <div class="field search-main-field"><label for="requestSearchV2">Buscar</label><div class="request-search-row"><div class="search-input-wrapper request-search-input-grow"><i class="fa-solid fa-magnifying-glass"></i><input id="requestSearchV2" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Ingrese N.° de seguimiento o N.° de formato" autocomplete="off"></div><button type="button" class="btn primary" id="btnBuscarTramite"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button><button type="button" class="btn" id="btnLimpiarTramite"><i class="fa-solid fa-rotate-left"></i> Limpiar</button></div><small id="searchHelp" class="muted"></small></div>
+ </div>
+</div>
+
+<div class="card tramite-list-card">
+ <div class="tramite-list-head"><div><h3>Listado de trámites</h3><p id="tramiteTabNote">Aquí aparecen los trámites que creó y todavía no ha enviado.</p></div></div>
+ <div class="tablewrap"><table class="tramites-unified-table">
+<thead><tr><th>N° seguimiento</th><th>N° formato</th><th>Tipo de trámite</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+<tbody id="requestsBody">
+{% for t in requests %}
+{% set estados_finales = ['Finalizada','Cerrado','Regularizado','Anulada','Anulado','Atendido','Aprobada','Aprobado'] %}
+{% if t.estado == 'Pendiente de mi revisión' %}{% set flujo = 'pendientes' %}{% elif t.estado == 'Pendiente de aprobación' %}{% set flujo = 'aprobar' %}{% elif t.estado in estados_finales %}{% set flujo = 'finalizados' %}{% else %}{% set flujo = 'proceso' %}{% endif %}
+<tr class="tramite-row" data-flujo="{{ flujo }}" data-tipo="{{ t.tipo }}" data-seguimiento="{{ (t.tracking or '')|lower }}" data-numero="{{ (t.numero or '')|string|lower }}" data-formato="{{ (t.formato or '')|lower }}">
+<td><strong class="tracking-code">{{ t.tracking }}</strong></td>
+<td class="request-code-cell"><strong>{{ t.numero }}</strong>{% if t.formato %}<small>{{ t.formato }}</small>{% endif %}</td>
+<td>{% if t.tipo=='REQ' %}<span class="type-pill req"><i class="fa-solid fa-box"></i> Requerimiento</span>{% elif t.tipo=='SP' %}<span class="type-pill sp"><i class="fa-solid fa-money-bill-wave"></i> Solicitud de pago</span>{% else %}{{ t.tipo }}{% endif %}</td>
+<td>{{ t.fecha }}</td>
+<td><span class="pill">{% if t.estado == 'Pendiente de mi revisión' %}Pendiente de mi revisión{% elif t.estado == 'Pendiente de aprobación' %}Pendiente de V°B°{% else %}{{ t.estado }}{% endif %}</span></td>
+<td><div class="request-actions"><a class="btn small" href="{{ url_for('request_detail',tid=t.id) }}"><i class="fa-regular fa-eye"></i> Detalle</a></div></td>
+</tr>
+{% endfor %}
+<tr id="requestsEmptyRow" class="requests-empty-row"><td colspan="6" class="requests-empty" id="requestsEmptyMessage">No hay trámites para mostrar.</td></tr>
+</tbody></table></div>
+ <div class="tramite-pagination" id="tramitePagination" hidden>
+  <div class="tramite-pagination-info" id="tramitePaginationInfo"></div>
+  <div class="tramite-pagination-controls">
+   <button type="button" class="btn small" id="tramitePrevPage"><i class="fa-solid fa-chevron-left"></i> Anterior</button>
+   <div class="tramite-page-numbers" id="tramitePageNumbers"></div>
+   <button type="button" class="btn small" id="tramiteNextPage">Siguiente <i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+ </div>
+</div>
+{% endblock %}

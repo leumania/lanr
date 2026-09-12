@@ -1,0 +1,43 @@
+{
+    "Settings": "Configuración",
+    "Manage your profile and account settings": "Administra tu perfil y la configuración de tu cuenta",
+
+    "Profile settings": "Configuración de perfil",
+    "Profile": "Perfil",
+    "Update your name and email address": "Actualiza tu nombre y correo electrónico",
+    "Name": "Nombre",
+    "Email": "Correo electrónico",
+    "Save": "Guardar",
+
+    "Security settings": "Configuración de seguridad",
+    "Security": "Seguridad",
+    "Update password": "Actualizar contraseña",
+    "Ensure your account is using a long, random password to stay secure": "Usa una contraseña larga y difícil de adivinar para mantener tu cuenta segura",
+    "Current password": "Contraseña actual",
+    "New password": "Nueva contraseña",
+    "Confirm password": "Confirmar contraseña",
+
+    "Appearance settings": "Configuración de apariencia",
+    "Appearance": "Apariencia",
+    "Update the appearance settings for your account": "Actualiza la apariencia de tu cuenta",
+    "Light": "Claro",
+    "Dark": "Oscuro",
+    "System": "Sistema",
+
+    "Delete account": "Eliminar cuenta",
+    "Delete your account and all of its resources": "Elimina tu cuenta y todos sus datos",
+    "Are you sure you want to delete your account?": "¿Seguro que deseas eliminar tu cuenta?",
+    "Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Una vez eliminada tu cuenta, todos sus datos se borrarán de forma permanente. Ingresa tu contraseña para confirmar que deseas eliminarla.",
+    "Password": "Contraseña",
+    "Cancel": "Cancelar",
+
+    "Log in to your account": "Iniciar sesión en tu cuenta",
+    "Log in": "Iniciar sesión",
+    "Forgot your password?": "¿Olvidaste tu contraseña?",
+    "Remember me": "Recuérdame",
+    "Log out": "Cerrar sesión",
+
+    "Profile updated.": "Perfil actualizado.",
+    "Password updated.": "Contraseña actualizada."
+    
+}

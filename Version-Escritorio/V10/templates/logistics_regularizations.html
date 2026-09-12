@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block body_class %}page-logistics-regularizations{% endblock %}
+{% block title %}Regularizaciones | LANR{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Regularizaciones</h1>
+    <p>Complete posteriormente el detalle de las compras realizadas por Logística.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h3 class="reg-section-title">Pendientes</h3>
+
+  {% if pendientes %}
+  <div class="reg-grid">
+    {% for r in pendientes %}
+    <div class="reg-item">
+      <div class="reg-main">
+        <strong>{{ r.tracking }}</strong>
+        <span>N° {{ r.numero }} · Creado por {{ r.creador_nombre }}</span>
+        <div>
+          <span class="reg-state">
+            <i class="fa-solid fa-clock"></i>
+            Pendiente de regularización
+          </span>
+        </div>
+      </div>
+
+      <div class="reg-data">
+        <span>Comprobantes</span>
+        <strong>{{ r.comprobantes }}</strong>
+      </div>
+
+      <div class="reg-data">
+        <span>Total de compra</span>
+        <strong>S/ {{ '%.2f'|format(r.total_compra or 0) }}</strong>
+      </div>
+
+      <a
+        class="btn primary"
+        href="{{ url_for('logistics_regularization_detail', tid=r.tramite_id) }}"
+      >
+        <i class="fa-solid fa-clipboard-check"></i>
+        Regularizar
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="reg-empty">
+    <i class="fa-regular fa-circle-check"></i>
+    No tienes regularizaciones de compra pendientes.
+  </div>
+  {% endif %}
+</div>
+
+{% if completadas %}
+<div class="card topgap">
+  <h3 class="reg-section-title">Completadas recientemente</h3>
+
+  <div class="reg-grid">
+    {% for r in completadas %}
+    <div class="reg-item">
+      <div class="reg-main">
+        <strong>{{ r.tracking }}</strong>
+        <span>N° {{ r.numero }} · {{ r.fecha_regularizacion or '' }}</span>
+      </div>
+
+      <div class="reg-data">
+        <span>Comprobantes</span>
+        <strong>{{ r.comprobantes }}</strong>
+      </div>
+
+      <div class="reg-data">
+        <span>Total de compra</span>
+        <strong>S/ {{ '%.2f'|format(r.total_compra or 0) }}</strong>
+      </div>
+
+      <a
+        class="btn"
+        href="{{ url_for('logistics_regularization_detail', tid=r.tramite_id) }}"
+      >
+        <i class="fa-regular fa-eye"></i>
+        Ver
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

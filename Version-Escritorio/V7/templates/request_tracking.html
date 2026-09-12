@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block body_class %}page-request-tracking{% endblock %}{% block title %} Seguimiento del trámite | LANR {% endblock %}{% block content %}
+<div class="track-head"><div><h1>Seguimiento del trámite</h1><p class="muted">Consulta rápida del estado y las acciones realizadas.</p></div>
+<div class="track-actions"><a class="btn" href="{{ url_for('requests') }}"><i class="fa-solid fa-arrow-left"></i> Volver</a><a class="btn primary" href="{{ url_for('request_detail',tid=t.id) }}"><i class="fa-regular fa-eye"></i> Ver detalle completo</a></div></div>
+<div class="card"><div class="track-summary">
+<div><span>Código de seguimiento</span><strong>{{ t.tracking }}</strong></div><div><span>N°</span><strong>{{ t.numero }}</strong></div><div><span>Código de formato</span><strong>{{ t.formato or '—' }}</strong></div>
+<div><span>Tipo</span><strong>{% if t.tipo=='REQ' %}Requerimiento de materiales{% else %}Solicitud de pago{% if t.subtipo %} · {{ t.subtipo }}{% endif %}{% endif %}</strong></div>
+<div><span>Fecha</span><strong>{{ t.fecha }}</strong></div><div><span>Creado por</span><strong>{{ t.creador_nombre }}</strong></div>
+</div><div class="track-status"><span>Estado actual</span><strong>{{ t.estado }}</strong></div></div>
+<div class="card topgap"><h3>Seguimiento</h3><p class="muted">Paso a paso de las acciones principales del trámite.</p>
+{% set ns=namespace(visibles=0) %}{% for h in history %}{% if 'Trámite modificado' not in h.accion and 'modificado durante la revisión' not in h.accion %}{% set ns.visibles=ns.visibles+1 %}
+<div class="track-history"><span class="date">{{ h.fecha }}</span><strong>{{ h.nombre }}</strong><span class="action">
+{% if 'Requerimiento registrado:' in h.accion %}Requerimiento registrado en obra.
+{% elif 'Solicitud registrada:' in h.accion %}Solicitud registrada en obra.
+{% elif 'Revisión final completada' in h.accion or 'Visto bueno:' in h.accion %}{% if h.nombre=='Artidoro Moreno' %}Gerencia de Obra dio visto bueno.{% elif h.nombre=='José Luis Becerra' %}Control y Planeamiento dio visto bueno.{% else %}Dio visto bueno.{% endif %}
+{% elif 'Requerimiento recibido por Logística' in h.accion %}Logística recibió el requerimiento.
+{% elif 'Compra registrada por Logística' in h.accion %}Logística registró la compra del requerimiento.
+{% elif 'Material enviado a obra' in h.accion %}Logística envió los materiales a obra.
+{% elif 'Recepción confirmada en obra' in h.accion %}Obra confirmó la recepción de los materiales.
+{% elif 'Pago de solicitud registrado' in h.accion or 'Pago registrado por Tesorería' in h.accion %}Se registró el pago de la solicitud.
+{% elif 'Conformidad' in h.accion and 'finalizada' in h.accion %}Gerencia General dio conformidad final.
+{% else %}{{ h.accion }}{% endif %}</span></div>
+{% endif %}{% endfor %}{% if ns.visibles==0 %}<p class="muted">Todavía no hay acciones de seguimiento registradas.</p>{% endif %}
+</div>{% endblock %}

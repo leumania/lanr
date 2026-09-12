@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Órdenes | LANR{% endblock %}
+{% block content %}
+<div class="lanr-module-shell">
+  <div class="lanr-module-head">
+    <div>
+      <span class="lanr-eyebrow">TRÁMITES</span>
+      <h1>Órdenes</h1>
+      <p>Órdenes de compra y de servicio. El formato oficial de exportación se incorporará cuando LANR entregue sus modelos.</p>
+    </div>
+    {% if user.role in ['Gerencia de Obra','Administración','Sistemas'] %}
+    <a class="btn primary" href="{{ url_for('new_order') }}"><i class="fa-solid fa-plus"></i> Nueva orden</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="nt-table">
+        <thead><tr><th>N°</th><th>Tipo</th><th>Fecha</th><th>Proveedor</th><th>Total</th><th>Estado</th><th>Documentos</th><th>Acción</th></tr></thead>
+        <tbody>
+        {% for o in rows %}
+          <tr>
+            <td>{{ o.numero }}</td><td>{{ o.tipo_orden }}</td><td>{{ o.fecha }}</td><td>{{ o.proveedor_nombre }}</td>
+            <td>{{ 'US$' if o.moneda=='USD' else 'S/' }} {{ '%.2f'|format(o.total) }}</td>
+            <td><span class="status {{ 'done' if o.estado=='Aprobada' else '' }}">{{ o.estado }}</span></td>
+            <td>
+              {% set ns=namespace(n=0) %}
+              {% for f in order_files if f.orden_id==o.id %}{% set ns.n=ns.n+1 %}<a class="btn small" target="_blank" href="{{ url_for('order_file',fid=f.id) }}"><i class="fa-regular fa-file"></i> {{ f.nombre_original }}</a>{% endfor %}
+              {% if ns.n==0 %}<span class="muted">—</span>{% endif %}
+            </td>
+            <td>
+              {% if o.estado=='Pendiente de Gerencia de Obra' and user.role=='Gerencia de Obra' %}
+                <form method="post" action="{{ url_for('approve_order',oid=o.id) }}"><button class="btn small primary">Dar V°B°</button></form>
+              {% elif o.estado=='Pendiente de Administración' and user.role=='Administración' %}
+                <form method="post" action="{{ url_for('approve_order',oid=o.id) }}"><button class="btn small primary">Dar V°B°</button></form>
+              {% elif o.estado=='Pendiente de Gerencia General' and user.role=='Gerencia General' %}
+                <form method="post" action="{{ url_for('approve_order',oid=o.id) }}"><button class="btn small primary">Aprobar</button></form>
+              {% else %}<span class="muted">—</span>{% endif %}
+            </td>
+          </tr>
+        {% else %}<tr><td colspan="8" class="muted">No hay órdenes registradas.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

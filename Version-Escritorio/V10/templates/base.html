@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{% block title %}LANR{% endblock %}</title>
+
+    <!-- CSS PROPIO -->
+    <link
+      rel="stylesheet"
+      href='{{ url_for("static", filename="css/styles.css") }}'
+    />
+    
+
+    <!-- FONT AWESOME -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+  </head>
+
+  <body class="{% block body_class %}{% endblock %}">
+    {% if user %}
+
+    <div class="app">
+      <!-- =========================
+           MENÚ LATERAL
+      ========================== -->
+
+      <aside class="sidebar" id="sidebar">
+        <!-- LOGO -->
+
+        <div class="brand">
+          <img
+            src='{{ url_for("static", filename="logo-lanr.jpeg") }}'
+            alt="LANR Inversiones"
+          />
+
+          <div>
+            <strong>LANR INVERSIONES</strong>
+
+            <span>Sistema Interno de Gestión</span>
+          </div>
+        </div>
+
+        <!-- NAVEGACIÓN -->
+
+        <nav>
+          <!-- INICIO -->
+          <a
+            href='{{ url_for("home") }}'
+            class="{% if request.endpoint == 'home' %}active{% endif %}"
+          >
+            <i class="fa-solid fa-house"></i>
+            <span>Inicio</span>
+          </a>
+
+          <!-- TRÁMITES -->
+          <a
+            href='{{ url_for("requests") }}'
+            class="{% if request.endpoint in ['requests', 'request_detail'] %}active{% endif %}"
+          >
+            <i class="fa-regular fa-folder-open"></i>
+            <span>Trámites</span>
+          </a>
+
+          <!-- NUEVO TRÁMITE -->
+          {% if user.role in ['Gerencia de Obra', 'Control y Planeamiento', 'Administración', 'Logística', 'Tesorería', 'Contabilidad', 'Sistemas'] %}
+
+          <a
+            href='{{ url_for("new_request") }}'
+            class="{% if request.endpoint in ['new_request', 'new_requirement', 'new_payment_request', 'create_requirement', 'create_payment_request'] %}active{% endif %}"
+          >
+            <i class="fa-solid fa-plus"></i>
+            <span>Nuevo trámite</span>
+          </a>
+
+          {% endif %}
+
+          <!-- TESORERÍA -->
+          {% if user.role in ['Tesorería', 'Sistemas'] %}
+          <a href='{{ url_for("treasury_dashboard") }}' class="{% if request.endpoint in ['treasury_dashboard', 'treasury_detail'] %}active{% endif %}">
+            <i class="fa-solid fa-building-columns"></i><span>Tesorería</span>
+          </a>
+          {% endif %}
+
+          <!-- REGULARIZACIONES -->
+          {% if user.role in ['Logística', 'Sistemas'] %}
+          <a
+            href='{{ url_for("logistics_regularizations") }}'
+            class="{% if request.endpoint in ['logistics_regularizations', 'logistics_regularization_detail'] %}active{% endif %}"
+          >
+            <i class="fa-solid fa-clipboard-check"></i>
+            <span>Regularizaciones</span>
+          </a>
+          {% endif %}
+
+          <div class="nav-divider"></div>
+          <span class="nav-section">GESTIÓN</span>
+
+          <a href='{{ url_for("reimbursements") }}' class="{% if request.endpoint in ['reimbursements','new_reimbursement'] %}active{% endif %}">
+            <i class="fa-solid fa-hand-holding-dollar"></i><span>Reembolsos / Rendiciones</span>
+          </a>
+
+          <a href='{{ url_for("orders") }}' class="{% if request.endpoint in ['orders','new_order'] %}active{% endif %}">
+            <i class="fa-solid fa-file-signature"></i><span>Órdenes</span>
+          </a>
+
+          <!-- PERFIL -->
+          <a
+            href='{{ url_for("profile") }}'
+            class="{% if request.endpoint == 'profile' %}active{% endif %}"
+          >
+            <i class="fa-regular fa-user"></i>
+            <span>Mi perfil</span>
+          </a>
+
+          <!-- SISTEMAS -->
+          {% if user.role == 'Sistemas' %}
+
+          <div class="nav-divider"></div>
+
+          <span class="nav-section">SISTEMA</span>
+
+          <a
+            href='{{ url_for("users") }}'
+            class="{% if request.endpoint in ['users', 'edit_user', 'toggle_user_status', 'reset_user_password'] %}active{% endif %}"
+          >
+            <i class="fa-solid fa-users-gear"></i>
+            <span>Administrar usuarios</span>
+          </a>
+
+          <a
+            href='{{ url_for("units") }}'
+            class="{% if request.endpoint in ['units', 'create_unit', 'edit_unit', 'toggle_unit_status', 'delete_unit'] %}active{% endif %}"
+          >
+            <i class="fa-solid fa-ruler-combined"></i>
+            <span>Administrar unidades</span>
+          </a>
+
+          {% endif %}
+        </nav>
+      </aside>
+
+      <button
+        type="button"
+        class="sidebar-overlay"
+        id="sidebarOverlay"
+        aria-label="Cerrar menú"
+        hidden
+      ></button>
+
+      <!-- =========================
+           CONTENIDO
+      ========================== -->
+
+      <main>
+        <!-- CABECERA -->
+
+        <header>
+          <!-- MENÚ CELULAR -->
+
+          <button
+            class="mobile"
+            id="mobileMenuButton"
+            type="button"
+            aria-label="Abrir menú"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            <i class="fa-solid fa-bars"></i>
+          </button>
+
+          <!-- OBRA -->
+
+          <div class="work project-selector">
+            {% if active_project %} {% if available_projects|length > 1 %}
+
+            <div class="project-selector-main">
+              <i class="fa-solid fa-helmet-safety"></i>
+
+              <div>
+                <span class="project-selector-label"> OBRA ACTIVA </span>
+
+                <select
+                  class="project-select"
+                  onchange="
+                    if (this.value) {
+                      document
+                        .getElementById('project-form-' + this.value)
+                        .submit();
+                    }
+                  "
+                  aria-label="Seleccionar obra"
+                >
+                  {% for project in available_projects %}
+
+                  <option
+                    value="{{ project.id }}"
+                    {% if project.id == active_project.id %}selected{% endif %}
+                  >
+                    {{ project.nombre }}
+                  </option>
+
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            {% for project in available_projects %}
+
+            <form
+              id="project-form-{{ project.id }}"
+              method="post"
+              action="{{ url_for('select_project', obra_id=project.id) }}"
+              class="project-hidden-form"
+            ></form>
+
+            {% endfor %} {% else %}
+
+            <div class="project-selector-main">
+              <i class="fa-solid fa-helmet-safety"></i>
+
+              <div>
+                <span class="project-selector-label"> OBRA ACTIVA </span>
+
+                <strong class="project-single-name">
+                  {{ active_project.nombre }}
+                </strong>
+              </div>
+            </div>
+
+            {% endif %} {% else %}
+
+            <div class="project-selector-main">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+
+              <div>
+                <span class="project-selector-label"> OBRA </span>
+
+                <strong class="project-single-name"> Sin obra asignada </strong>
+              </div>
+            </div>
+
+            {% endif %}
+          </div>
+
+          <!-- USUARIO -->
+
+          <div class="who">
+            <!-- NOTIFICACIONES -->
+
+            <div class="notification-wrapper">
+              <button
+                type="button"
+                class="notification-button"
+                title="Notificaciones"
+                onclick="toggleNotifications()"
+              >
+                <i class="fa-regular fa-bell"></i>
+
+                {% if notificaciones_no_leidas > 0 %}
+                <span class="notification-count">
+                  {{ notificaciones_no_leidas }}
+                </span>
+                {% endif %}
+              </button>
+
+              <div id="notificationPanel" class="notification-panel hidden">
+                <div class="notification-panel-header">
+                  <div>
+                    <strong>Notificaciones</strong>
+
+                    <span>{{ notificaciones_no_leidas }} sin leer</span>
+                  </div>
+
+                  {% if notificaciones_no_leidas > 0 %}
+                  <form
+                    method="post"
+                    action='{{ url_for("mark_all_notifications") }}'
+                  >
+                    <button type="submit" class="notification-read-all">
+                      Marcar todas como leídas
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+
+                <div class="notification-list">
+                  {% if notificaciones_usuario %} {% for n in
+                  notificaciones_usuario %}
+
+                  <a
+                    href='{{ url_for("open_notification", nid=n.id) }}'
+                    class="notification-item {% if not n.leida %}unread{% endif %}"
+                  >
+                    <div class="notification-item-icon">
+                      {% if n.tipo == 'accion' %}
+                      <i class="fa-solid fa-circle-exclamation"></i>
+                      {% else %}
+                      <i class="fa-regular fa-bell"></i>
+                      {% endif %}
+                    </div>
+
+                    <div class="notification-item-content">
+                      <div class="notification-item-top">
+                        <strong>{{ n.titulo }}</strong>
+
+                        {% if not n.leida %}
+                        <span class="notification-dot"></span>
+                        {% endif %}
+                      </div>
+
+                      {% if n.tracking %}
+                      <small class="notification-tracking">
+                        {{ n.tracking }}
+                      </small>
+                      {% endif %}
+
+                      <p>{{ n.mensaje }}</p>
+
+                      <small class="notification-date"> {{ n.fecha }} </small>
+                    </div>
+                  </a>
+
+                  {% endfor %} {% else %}
+
+                  <div class="notification-empty">
+                    <i class="fa-regular fa-bell-slash"></i>
+
+                    <strong>No tienes notificaciones</strong>
+
+                    <span>
+                      Cuando tengas una actualización aparecerá aquí.
+                    </span>
+                  </div>
+
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- AVATAR -->
+
+            <div class="avatar">
+              {% if user.profile_photo %}
+
+              <img
+                src="{{ url_for(
+      'static',
+      filename='profile_photos/' ~ user.profile_photo
+    ) }}"
+                alt="Foto de {{ user.full_name }}"
+              />
+
+              {% else %}
+
+              <span> {{ user.full_name[0]|upper }} </span>
+
+              {% endif %}
+            </div>
+
+            <!-- DATOS -->
+
+            <div class="user-data">
+              <strong>{{ user.full_name }}</strong>
+
+              <small>{{ user.role }}</small>
+            </div>
+
+            <!-- CERRAR SESIÓN -->
+
+            <a
+              href='{{ url_for("logout") }}'
+              class="logout-link"
+              title="Cerrar sesión"
+            >
+              <i class="fa-solid fa-arrow-right-from-bracket"></i>
+
+              <span>Salir</span>
+            </a>
+          </div>
+        </header>
+
+        <!-- CONTENIDO DE CADA PÁGINA -->
+
+        <section class="content">
+          {% with messages = get_flashed_messages(with_categories=true) %} {%
+          for cat, msg in messages %}
+          <div class="flash {{ cat }}">{{ msg }}</div>
+          {% endfor %} {% endwith %} {% block content %} {% endblock %}
+        </section>
+
+        <!-- PIE -->
+
+        <footer>
+          LANR INVERSIONES E.I.R.L. · RUC 20609096838 · Sistema Interno · 2026
+        </footer>
+      </main>
+    </div>
+
+    {% else %} {% block guest %} {% endblock %} {% endif %}
+
+    <!-- JS -->
+
+    <script src='{{ url_for("static", filename="js/app.js") }}'></script>
+    
+  </body>
+</html>

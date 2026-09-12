@@ -1,0 +1,683 @@
+{% extends 'base.html' %} {% block title %} Inicio | LANR {% endblock %} {%
+block content %}
+
+<div class="pagehead">
+  <div>
+    <h1>Hola, {{ user.full_name.split(' ')[0] }}</h1>
+
+    <p>Revisa tus pendientes y acciones por atender.</p>
+  </div>
+
+  {% if user.username|lower in ['amoreno','jbecerra','ogonzales'] %}
+  <a class="btn primary new-tramite-btn" href='{{ url_for("new_request") }}'>
+    <i class="fa-solid fa-plus"></i>
+    Nuevo trámite
+  </a>
+  {% endif %}
+</div>
+
+<!-- MÉTRICAS -->
+
+<div class="metrics">
+  <div class="metric metric-blue">
+    <div class="metric-info">
+      <span>Trámites activos</span>
+      <strong>{{ counts.activos }}</strong>
+    </div>
+
+    <div class="metric-icon">
+      <i class="fa-regular fa-folder-open"></i>
+    </div>
+  </div>
+
+  <div class="metric metric-yellow">
+    <div class="metric-info">
+      <span>Por aprobar</span>
+      <strong>{{ counts.aprob }}</strong>
+    </div>
+
+    <div class="metric-icon">
+      <i class="fa-regular fa-clock"></i>
+    </div>
+  </div>
+
+  <div class="metric metric-office">
+    <div class="metric-info">
+      {% if user.username|lower == 'rvasquez' %}
+
+      <span>En gestión logística</span>
+      <strong>{{ pendientes_logistica|length }}</strong>
+
+      {% elif user.username|lower == 'ycoronado' %}
+
+      <span>Pagos REQ pendientes</span>
+      <strong>{{ pendientes_tesoreria|length }}</strong>
+
+      {% elif user.username|lower == 'lneyra' %}
+
+      <span>SP por asignar pago</span>
+      <strong>{{ sp_pendientes_asignacion|length }}</strong>
+
+      {% else %}
+
+      <span>En oficina / logística</span>
+      <strong>{{ counts.oficina }}</strong>
+
+      {% endif %}
+    </div>
+
+    <div class="metric-icon">
+      <i class="fa-solid fa-building"></i>
+    </div>
+  </div>
+
+  <div class="metric metric-green">
+    <div class="metric-info">
+      {% if user.username|lower == 'rvasquez' %}
+
+      <span>Pendientes de envío</span>
+      <strong>{{ pendientes_envio }}</strong>
+
+      {% elif user.username|lower == 'ycoronado' %}
+
+      <span>SP asignadas</span>
+      <strong>{{ sp_tesoreria|length }}</strong>
+
+      {% elif user.username|lower == 'lneyra' %}
+
+      <span>Conformidades pendientes</span>
+      <strong>{{ sp_pendientes_conformidad|length }}</strong>
+
+      {% else %}
+
+      <span>Por recibir en obra</span>
+      <strong>{{ counts.recibir }}</strong>
+
+      {% endif %}
+    </div>
+
+    <div class="metric-icon">
+      <i class="fa-solid fa-truck"></i>
+    </div>
+  </div>
+</div>
+
+<!-- PENDIENTES DE APROBACIÓN -->
+
+<div class="card recent-card" id="pendientes-aprobacion">
+  <div class="card-title-row">
+    <div>
+      <h3>Pendientes de aprobación</h3>
+      <p>Trámites que requieren tu visto bueno.</p>
+    </div>
+
+    {% if pendientes_aprobacion %}
+    <span class="pending-count">
+      {{ pendientes_aprobacion|length }} pendiente{% if
+      pendientes_aprobacion|length != 1 %}s{% endif %}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if pendientes_aprobacion %}
+
+  <div class="tablewrap">
+    <table class="recent-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Tipo</th>
+          <th>N°</th>
+          <th>Aprobación</th>
+          <th>Creado por</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for t in pendientes_aprobacion %}
+
+        <tr>
+          <td>
+            <strong class="tracking-code">{{ t.tracking }}</strong>
+          </td>
+
+          <td>
+            {% if t.tipo == 'REQ' %}
+
+            <span class="type-pill req">
+              <i class="fa-solid fa-box"></i>
+              Requerimiento
+            </span>
+
+            {% else %}
+
+            <span class="type-pill sp">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              Solicitud
+            </span>
+
+            {% endif %}
+          </td>
+
+          <td>{{ t.numero }}</td>
+
+          <td>{{ t.rol_aprobacion }}</td>
+
+          <td>{{ t.creador_nombre }}</td>
+
+          <td>
+            <a
+              class="btn small action-view"
+              href="{{ url_for('request_detail', tid=t.id) }}"
+            >
+              <i class="fa-regular fa-eye"></i>
+              Revisar
+            </a>
+          </td>
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="fa-regular fa-circle-check"></i>
+    </div>
+
+    <strong>No tienes aprobaciones pendientes</strong>
+
+    <span>Todos los trámites asignados a ti están atendidos.</span>
+  </div>
+
+  {% endif %}
+</div>
+
+{% if user.username|lower == 'rvasquez' %}
+
+<!-- PENDIENTES DE GESTIÓN LOGÍSTICA -->
+
+<div class="card recent-card topgap">
+  <div class="card-title-row">
+    <div>
+      <h3>Pendientes de gestión logística</h3>
+      <p>Requerimientos que requieren una acción de Logística.</p>
+    </div>
+
+    {% if pendientes_logistica %}
+
+    <span class="pending-count">
+      {{ pendientes_logistica|length }} pendiente{% if
+      pendientes_logistica|length != 1 %}s{% endif %}
+    </span>
+
+    {% endif %}
+  </div>
+
+  {% if pendientes_logistica %}
+
+  <div class="tablewrap">
+    <table class="recent-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>N°</th>
+          <th>Creado por</th>
+          <th>Pendiente de</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for t in pendientes_logistica %}
+
+        <tr>
+          <td>
+            <strong class="tracking-code">{{ t.tracking }}</strong>
+          </td>
+
+          <td>{{ t.numero }}</td>
+
+          <td>{{ t.creador_nombre }}</td>
+
+          <td>
+            {% if t.pendiente_de == 'Recepcionar' %}
+
+            <span class="workflow-pill reception">
+              <i class="fa-solid fa-inbox"></i>
+              Recepcionar
+            </span>
+
+            {% elif t.pendiente_de == 'Cotización / compra' %}
+
+            <span class="workflow-pill purchase">
+              <i class="fa-solid fa-cart-shopping"></i>
+              Cotización / compra
+            </span>
+
+            {% elif t.pendiente_de == 'Pago' %}
+
+            <span class="workflow-pill payment">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              Pago
+            </span>
+
+            {% elif t.pendiente_de == 'Pago en Tesorería' %}
+
+            <span class="workflow-pill treasury">
+              <i class="fa-regular fa-clock"></i>
+              Pago en Tesorería
+            </span>
+
+            {% elif t.pendiente_de == 'Guía y envío a obra' %}
+
+            <span class="workflow-pill dispatch">
+              <i class="fa-solid fa-truck"></i>
+              Guía y envío
+            </span>
+
+            {% else %}
+
+            <span class="workflow-pill">{{ t.pendiente_de }}</span>
+
+            {% endif %}
+          </td>
+
+          <td>
+            <a
+              class="btn small action-view"
+              href="{{ url_for('request_detail', tid=t.id) }}"
+            >
+              <i class="fa-regular fa-eye"></i>
+              Gestionar
+            </a>
+          </td>
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="fa-regular fa-circle-check"></i>
+    </div>
+
+    <strong>No tienes gestiones logísticas pendientes</strong>
+
+    <span>Los requerimientos asignados a Logística están atendidos.</span>
+  </div>
+
+  {% endif %}
+</div>
+
+{% endif %} {% if user.username|lower == 'ycoronado' %}
+
+<!-- PENDIENTES DE TESORERÍA - REQ -->
+
+<div class="card recent-card topgap">
+  <div class="card-title-row">
+    <div>
+      <h3>Pendientes de Tesorería</h3>
+      <p>Pagos y reembolsos de requerimientos pendientes de atención.</p>
+    </div>
+
+    {% if pendientes_tesoreria %}
+    <span class="pending-count">
+      {{ pendientes_tesoreria|length }} pendiente{% if
+      pendientes_tesoreria|length != 1 %}s{% endif %}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if pendientes_tesoreria %}
+
+  <div class="tablewrap">
+    <table class="recent-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Origen</th>
+          <th>Creado por</th>
+          <th>Monto</th>
+          <th>Solicitud</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for s in pendientes_tesoreria %}
+
+        <tr>
+          <td>
+            <strong class="tracking-code">{{ s.tracking }}</strong>
+          </td>
+
+          <td>
+            {% if s.origen == 'REQ-Compra' %}
+
+            <span class="workflow-pill treasury">
+              <i class="fa-solid fa-building-columns"></i>
+              Pago de compra
+            </span>
+
+            {% elif s.origen == 'REQ-Reembolso' %}
+
+            <span class="workflow-pill payment">
+              <i class="fa-solid fa-rotate-left"></i>
+              Reembolso
+            </span>
+
+            {% else %} {{ s.origen }} {% endif %}
+          </td>
+
+          <td>{{ s.creador_nombre }}</td>
+
+          <td>
+            <strong>S/ {{ '%.2f'|format(s.monto or 0) }}</strong>
+          </td>
+
+          <td>{{ s.fecha_solicitud or '-' }}</td>
+
+          <td>
+            <a
+              class="btn small action-view"
+              href="{{ url_for('request_detail', tid=s.tramite_id) }}"
+            >
+              <i class="fa-regular fa-eye"></i>
+              Revisar y pagar
+            </a>
+          </td>
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="fa-regular fa-circle-check"></i>
+    </div>
+
+    <strong>No tienes pagos REQ pendientes</strong>
+
+    <span>Todas las solicitudes de Tesorería están atendidas.</span>
+  </div>
+
+  {% endif %}
+</div>
+
+<!-- SOLICITUDES DE PAGO - SP -->
+
+<div class="card recent-card topgap">
+  <div class="card-title-row">
+    <div>
+      <h3>Solicitudes de pago asignadas</h3>
+      <p>Solicitudes de pago asignadas a Tesorería por Gerencia General.</p>
+    </div>
+
+    {% if sp_tesoreria %}
+    <span class="pending-count">
+      {{ sp_tesoreria|length }} pendiente{% if sp_tesoreria|length != 1 %}s{%
+      endif %}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if sp_tesoreria %}
+
+  <div class="tablewrap">
+    <table class="recent-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>N°</th>
+          <th>Creado por</th>
+          <th>Monto</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for s in sp_tesoreria %}
+
+        <tr>
+          <td>
+            <strong class="tracking-code">{{ s.tracking }}</strong>
+          </td>
+
+          <td>{{ s.numero }}</td>
+
+          <td>{{ s.creador_nombre }}</td>
+
+          <td>
+            <strong>S/ {{ '%.2f'|format(s.abono or 0) }}</strong>
+          </td>
+
+          <td>
+            <span class="workflow-pill treasury">
+              <i class="fa-solid fa-building-columns"></i>
+              Asignada a Tesorería
+            </span>
+          </td>
+
+          <td>
+            <a
+              class="btn small action-view"
+              href="{{ url_for('request_detail', tid=s.id) }}"
+            >
+              <i class="fa-regular fa-eye"></i>
+              Revisar y pagar
+            </a>
+          </td>
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="fa-regular fa-circle-check"></i>
+    </div>
+
+    <strong>No tienes solicitudes de pago asignadas</strong>
+
+    <span>No hay solicitudes pendientes para Tesorería.</span>
+  </div>
+
+  {% endif %}
+</div>
+
+{% endif %} {% if user.username|lower == 'lneyra' %}
+
+<!-- SP PENDIENTES DE ASIGNACIÓN DE PAGO -->
+
+<div class="card recent-card topgap">
+  <div class="card-title-row">
+    <div>
+      <h3>Solicitudes pendientes de asignación de pago</h3>
+
+      <p>
+        Solicitudes aprobadas por Administración y Logística que requieren
+        decisión de Gerencia General.
+      </p>
+    </div>
+
+    {% if sp_pendientes_asignacion %}
+    <span class="pending-count">
+      {{ sp_pendientes_asignacion|length }} pendiente{% if
+      sp_pendientes_asignacion|length != 1 %}s{% endif %}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if sp_pendientes_asignacion %}
+
+  <div class="tablewrap">
+    <table class="recent-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>N°</th>
+          <th>Creado por</th>
+          <th>Monto</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for s in sp_pendientes_asignacion %}
+
+        <tr>
+          <td>
+            <strong class="tracking-code">{{ s.tracking }}</strong>
+          </td>
+
+          <td>{{ s.numero }}</td>
+
+          <td>{{ s.creador_nombre }}</td>
+
+          <td>
+            <strong>S/ {{ '%.2f'|format(s.abono or 0) }}</strong>
+          </td>
+
+          <td>
+            <span class="workflow-pill treasury">
+              <i class="fa-solid fa-user-check"></i>
+              Pendiente asignación
+            </span>
+          </td>
+
+          <td>
+            <a
+              class="btn small action-view"
+              href="{{ url_for('request_detail', tid=s.id) }}"
+            >
+              <i class="fa-regular fa-eye"></i>
+              Revisar
+            </a>
+          </td>
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="fa-regular fa-circle-check"></i>
+    </div>
+
+    <strong>No tienes solicitudes por asignar</strong>
+
+    <span>No hay solicitudes esperando decisión de pago.</span>
+  </div>
+
+  {% endif %}
+</div>
+
+<!-- SP PENDIENTES DE CONFORMIDAD FINAL -->
+
+<div class="card recent-card topgap">
+  <div class="card-title-row">
+    <div>
+      <h3>Conformidades finales pendientes</h3>
+
+      <p>
+        Solicitudes cuyo pago ya fue registrado y requieren revisión final de
+        Gerencia General.
+      </p>
+    </div>
+
+    {% if sp_pendientes_conformidad %}
+    <span class="pending-count">
+      {{ sp_pendientes_conformidad|length }} pendiente{% if
+      sp_pendientes_conformidad|length != 1 %}s{% endif %}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if sp_pendientes_conformidad %}
+
+  <div class="tablewrap">
+    <table class="recent-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>N°</th>
+          <th>Creado por</th>
+          <th>Monto pagado</th>
+          <th>Fecha de pago</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for s in sp_pendientes_conformidad %}
+
+        <tr>
+          <td>
+            <strong class="tracking-code">{{ s.tracking }}</strong>
+          </td>
+
+          <td>{{ s.numero }}</td>
+
+          <td>{{ s.creador_nombre }}</td>
+
+          <td>
+            <strong>S/ {{ '%.2f'|format(s.monto_pagado or 0) }}</strong>
+          </td>
+
+          <td>{{ s.fecha_pago or '-' }}</td>
+
+          <td>
+            <a
+              class="btn small action-view"
+              href="{{ url_for('request_detail', tid=s.id) }}"
+            >
+              <i class="fa-regular fa-eye"></i>
+              Revisar y dar conformidad
+            </a>
+          </td>
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="fa-regular fa-circle-check"></i>
+    </div>
+
+    <strong>No tienes conformidades pendientes</strong>
+
+    <span>No hay solicitudes pagadas esperando revisión final.</span>
+  </div>
+
+  {% endif %}
+</div>
+
+{% endif %} {% endblock %}

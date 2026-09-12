@@ -1,0 +1,50 @@
+{% extends 'base.html' %} {% block title %} Mi perfil | LANR {% endblock %} {%
+block content %}
+
+<div class="pagehead">
+  <div>
+    <h1>Mi perfil</h1>
+    <p>Consulta tus datos personales.</p>
+  </div>
+</div>
+
+<div class="card formgrid">
+  <div class="field">
+    <label>Nombres y apellidos</label>
+
+    <input type="text" value="{{ user.full_name }}" readonly />
+  </div>
+
+  <div class="field">
+    <label>Usuario</label>
+
+    <input type="text" value="{{ user.username }}" readonly />
+  </div>
+
+  <div class="field">
+    <label>Correo</label>
+
+    <input type="email" value="{{ user.email or '' }}" readonly />
+  </div>
+
+  <div class="field">
+    <label>Teléfono</label>
+
+    <input type="text" value="{{ user.phone or '' }}" readonly />
+  </div>
+
+  <div class="field">
+    <label>Rol / Área</label>
+
+    <input type="text" value="{{ user.role }}" readonly />
+  </div>
+
+  <div class="full">
+    <a class="btn primary" href="{{ url_for('change_password') }}">
+      <i class="fa-solid fa-key"></i>
+      Cambiar contraseña
+    </a>
+  </div>
+</div>
+
+{% endblock %}

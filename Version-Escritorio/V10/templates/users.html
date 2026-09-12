@@ -1,0 +1,620 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Administrar usuarios | LANR
+{% endblock %}
+
+{% block content %}
+
+<div class="pagehead users-pagehead">
+  <div>
+    <h1>Administrar usuarios</h1>
+    <p>Gestiona el acceso, roles y estado de las cuentas internas del sistema.</p>
+  </div>
+
+  <div class="users-summary">
+    <i class="fa-solid fa-users"></i>
+    <span>
+      <strong>{{ users|length }}</strong>
+      usuarios registrados
+    </span>
+  </div>
+</div>
+
+
+<div class="card users-table-card">
+
+  <div class="tablewrap">
+
+    <table class="users-compact-table">
+
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Nombre</th>
+          <th>Rol / Área</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for u in users %}
+
+        <tr>
+
+          <!-- USUARIO / AVATAR -->
+          <td>
+            <div class="users-table-user">
+
+              <div class="users-table-avatar">
+
+                {% if u.profile_photo %}
+
+                <img
+                  src="{{ url_for('static', filename='profile_photos/' ~ u.profile_photo) }}"
+                  alt="Foto de {{ u.full_name }}"
+                />
+
+                {% else %}
+
+                <span>
+                  {{ (u.full_name or u.username)[0]|upper }}
+                </span>
+
+                {% endif %}
+
+              </div>
+
+              <strong>
+                {{ u.username }}
+              </strong>
+
+            </div>
+          </td>
+
+
+          <!-- NOMBRE -->
+          <td>
+            <span class="users-table-name">
+              {{ u.full_name }}
+            </span>
+          </td>
+
+
+          <!-- ROL -->
+          <td>
+            <span class="users-role-chip">
+              {{ u.role }}
+            </span>
+          </td>
+
+
+          <!-- ESTADO -->
+          <td>
+
+            {% if u.active %}
+
+            <span class="user-status-badge active">
+              <span></span>
+              Activa
+            </span>
+
+            {% else %}
+
+            <span class="user-status-badge inactive">
+              <span></span>
+              Inactiva
+            </span>
+
+            {% endif %}
+
+          </td>
+
+
+          <!-- ACCIÓN -->
+          <td>
+
+            <button
+              type="button"
+              class="btn primary users-view-btn"
+              onclick="openUserModal('user-modal-{{ u.id }}')"
+            >
+              <i class="fa-solid fa-eye"></i>
+              Administrar
+            </button>
+
+          </td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     MODALES
+     ========================================================= -->
+
+{% for u in users %}
+
+<div
+  id="user-modal-{{ u.id }}"
+  class="user-modal"
+  aria-hidden="true"
+>
+
+  <div
+    class="user-modal-backdrop"
+    onclick="closeUserModal('user-modal-{{ u.id }}')"
+  ></div>
+
+
+  <div
+    class="user-modal-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="user-modal-title-{{ u.id }}"
+  >
+
+    <!-- CABECERA -->
+
+    <div class="user-modal-header">
+
+      <div class="user-modal-identity">
+
+        <div class="user-admin-avatar">
+
+          {% if u.profile_photo %}
+
+          <img
+            src="{{ url_for('static', filename='profile_photos/' ~ u.profile_photo) }}"
+            alt="Foto de {{ u.full_name }}"
+          />
+
+          {% else %}
+
+          <span>
+            {{ (u.full_name or u.username)[0]|upper }}
+          </span>
+
+          {% endif %}
+
+        </div>
+
+
+        <div>
+
+          <h2 id="user-modal-title-{{ u.id }}">
+            {{ u.full_name }}
+          </h2>
+
+          <p>
+            {{ u.role }}
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="user-modal-header-actions">
+
+        {% if u.active %}
+
+        <span class="user-status-badge active">
+          <span></span>
+          Cuenta activa
+        </span>
+
+        {% else %}
+
+        <span class="user-status-badge inactive">
+          <span></span>
+          Cuenta inactiva
+        </span>
+
+        {% endif %}
+
+
+        <button
+          type="button"
+          class="user-modal-close"
+          onclick="closeUserModal('user-modal-{{ u.id }}')"
+          aria-label="Cerrar"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- CUERPO -->
+
+    <div class="user-modal-body">
+
+
+      <!-- INFORMACIÓN PERSONAL -->
+
+      <section class="user-modal-section">
+
+        <div class="user-section-title">
+
+          <div>
+            <i class="fa-regular fa-address-card"></i>
+          </div>
+
+          <span>Información personal</span>
+
+        </div>
+
+
+        <div class="user-modal-info-grid">
+
+          <div class="user-info-item">
+
+            <span class="user-info-label">
+              Nombres y apellidos
+            </span>
+
+            <strong>
+              {{ u.full_name }}
+            </strong>
+
+          </div>
+
+
+          <div class="user-info-item">
+
+            <span class="user-info-label">
+              Correo electrónico
+            </span>
+
+            {% if u.email %}
+
+            <span>
+              {{ u.email }}
+            </span>
+
+            {% else %}
+
+            <span class="user-empty-value">
+              No registrado
+            </span>
+
+            {% endif %}
+
+          </div>
+
+
+          <div class="user-info-item">
+
+            <span class="user-info-label">
+              Teléfono
+            </span>
+
+            {% if u.phone %}
+
+            <span>
+              {{ u.phone }}
+            </span>
+
+            {% else %}
+
+            <span class="user-empty-value">
+              No registrado
+            </span>
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
+
+        <div class="user-profile-note">
+
+          <i class="fa-solid fa-circle-info"></i>
+
+          <span>
+            Los datos personales son administrados por el usuario
+            desde <strong>Mi perfil</strong>.
+          </span>
+
+        </div>
+
+      </section>
+
+
+      <!-- ACCESO -->
+
+      <section class="user-modal-section">
+
+        <div class="user-section-title">
+
+          <div>
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+
+          <span>Acceso al sistema</span>
+
+        </div>
+
+
+        <form
+          method="post"
+          action="{{ url_for('edit_user', uid=u.id) }}"
+          class="user-access-form"
+        >
+
+          <div class="user-access-grid">
+
+            <div class="field">
+
+              <label for="username-modal-{{ u.id }}">
+                Usuario
+              </label>
+
+              <input
+                id="username-modal-{{ u.id }}"
+                type="text"
+                name="username"
+                value="{{ u.username }}"
+                minlength="3"
+                maxlength="30"
+                autocomplete="off"
+                spellcheck="false"
+                autocapitalize="none"
+                required
+              />
+
+            </div>
+
+
+            <div class="field">
+
+              <label for="role-modal-{{ u.id }}">
+                Rol / Área
+              </label>
+
+              <select
+                id="role-modal-{{ u.id }}"
+                name="role"
+                required
+              >
+
+                <option
+                  value="Gerencia de Obra"
+                  {% if u.role == 'Gerencia de Obra' %}selected{% endif %}
+                >
+                  Gerencia de Obra
+                </option>
+
+                <option
+                  value="Control y Planeamiento"
+                  {% if u.role == 'Control y Planeamiento' %}selected{% endif %}
+                >
+                  Control y Planeamiento
+                </option>
+
+                <option
+                  value="Gerencia General"
+                  {% if u.role == 'Gerencia General' %}selected{% endif %}
+                >
+                  Gerencia General
+                </option>
+
+                <option
+                  value="Administración"
+                  {% if u.role == 'Administración' %}selected{% endif %}
+                >
+                  Administración
+                </option>
+
+                <option
+                  value="Logística"
+                  {% if u.role == 'Logística' %}selected{% endif %}
+                >
+                  Logística
+                </option>
+
+                <option
+                  value="Tesorería"
+                  {% if u.role == 'Tesorería' %}selected{% endif %}
+                >
+                  Tesorería
+                </option>
+
+                <option
+                  value="Contabilidad"
+                  {% if u.role == 'Contabilidad' %}selected{% endif %}
+                >
+                  Contabilidad
+                </option>
+
+                <option
+                  value="Sistemas"
+                  {% if u.role == 'Sistemas' %}selected{% endif %}
+                >
+                  Sistemas
+                </option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+
+          <div class="user-access-actions">
+
+            <button
+              type="submit"
+              class="btn primary"
+            >
+              <i class="fa-solid fa-floppy-disk"></i>
+              Guardar cambios
+            </button>
+
+          </div>
+
+        </form>
+
+
+        <!-- ESTADO -->
+
+        <div class="user-account-controls">
+
+          <div>
+
+            <span class="user-info-label">
+              Estado de la cuenta
+            </span>
+
+            {% if u.active %}
+
+            <p>
+              El usuario puede ingresar al sistema.
+            </p>
+
+            {% else %}
+
+            <p>
+              El acceso de este usuario está bloqueado.
+            </p>
+
+            {% endif %}
+
+          </div>
+
+
+          <form
+            method="post"
+            action="{{ url_for('toggle_user_status', uid=u.id) }}"
+          >
+
+            {% if u.active %}
+
+            <button
+              type="submit"
+              class="btn user-deactivate-btn"
+            >
+              <i class="fa-solid fa-user-slash"></i>
+              Desactivar cuenta
+            </button>
+
+            {% else %}
+
+            <button
+              type="submit"
+              class="btn primary"
+            >
+              <i class="fa-solid fa-user-check"></i>
+              Activar cuenta
+            </button>
+
+            {% endif %}
+
+          </form>
+
+        </div>
+
+      </section>
+
+
+      <!-- CONTRASEÑA -->
+
+      <section class="user-modal-section user-modal-password-section">
+
+        <div class="user-section-title">
+
+          <div>
+            <i class="fa-solid fa-key"></i>
+          </div>
+
+          <span>Restablecer acceso</span>
+
+        </div>
+
+
+        <form
+          method="post"
+          action="{{ url_for('reset_user_password', uid=u.id) }}"
+          class="user-password-form"
+        >
+
+          <div class="field">
+
+            <label for="new-password-modal-{{ u.id }}">
+              Nueva contraseña temporal
+            </label>
+
+            <input
+              id="new-password-modal-{{ u.id }}"
+              type="password"
+              name="nueva_password"
+              placeholder="Nueva contraseña"
+              minlength="8"
+              maxlength="64"
+              autocomplete="new-password"
+              required
+            />
+
+          </div>
+
+
+          <div class="field">
+
+            <label for="confirm-password-modal-{{ u.id }}">
+              Confirmar contraseña temporal
+            </label>
+
+            <input
+              id="confirm-password-modal-{{ u.id }}"
+              type="password"
+              name="confirmar_password"
+              placeholder="Repite la contraseña"
+              minlength="8"
+              maxlength="64"
+              autocomplete="new-password"
+              required
+            />
+
+          </div>
+
+
+          <button
+            type="submit"
+            class="btn"
+          >
+            <i class="fa-solid fa-key"></i>
+            Asignar contraseña temporal
+          </button>
+
+        </form>
+
+      </section>
+
+    </div>
+
+  </div>
+
+</div>
+
+{% endfor %}
+
+
+
+
+{% endblock %}

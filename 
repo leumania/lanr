@@ -1,0 +1,151 @@
+[90m= [39m[34;4mIlluminate\Database\Eloquent\Collection[39;24m {#9346
+    [34mall[39m: [
+      [34;4mApp\Models\User[39;24m {#8870
+        [34mid[39m: [35m1[39m,
+        [34mname[39m: [32m"[39m[32mArtidoro Moreno[39m[32m"[39m,
+        [34musername[39m: [32m"[39m[32maMoreno[39m[32m"[39m,
+        [34mroles[39m: [34;4mIlluminate\Database\Eloquent\Collection[39;24m {#8890
+          [34mall[39m: [
+            [34;4mSpatie\Permission\Models\Role[39;24m {#9340
+              [34mid[39m: [35m1[39m,
+              [34mname[39m: [32m"[39m[32mGerencia de Obra[39m[32m"[39m,
+              [34mguard_name[39m: [32m"[39m[32mweb[39m[32m"[39m,
+              [34mcreated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mupdated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mpivot[39m: [34;4mIlluminate\Database\Eloquent\Relations\MorphPivot[39;24m {#9338
+                [34mmodel_type[39m: [32m"[39m[32mApp[39m\\[32mModels[39m\\[32mUser[39m[32m"[39m,
+                [34mmodel_id[39m: [35m1[39m,
+                [34mrole_id[39m: [35m1[39m,
+              },
+            },
+          ],
+        },
+      },
+      [34;4mApp\Models\User[39;24m {#8869
+        [34mid[39m: [35m2[39m,
+        [34mname[39m: [32m"[39m[32mJosé Luis Becerra[39m[32m"[39m,
+        [34musername[39m: [32m"[39m[32mjBecerra[39m[32m"[39m,
+        [34mroles[39m: [34;4mIlluminate\Database\Eloquent\Collection[39;24m {#9353
+          [34mall[39m: [
+            [34;4mSpatie\Permission\Models\Role[39;24m {#9336
+              [34mid[39m: [35m2[39m,
+              [34mname[39m: [32m"[39m[32mControl y Planeamiento[39m[32m"[39m,
+              [34mguard_name[39m: [32m"[39m[32mweb[39m[32m"[39m,
+              [34mcreated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mupdated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mpivot[39m: [34;4mIlluminate\Database\Eloquent\Relations\MorphPivot[39;24m {#8886
+                [34mmodel_type[39m: [32m"[39m[32mApp[39m\\[32mModels[39m\\[32mUser[39m[32m"[39m,
+                [34mmodel_id[39m: [35m2[39m,
+                [34mrole_id[39m: [35m2[39m,
+              },
+            },
+          ],
+        },
+      },
+      [34;4mApp\Models\User[39;24m {#8872
+        [34mid[39m: [35m3[39m,
+        [34mname[39m: [32m"[39m[32mLuis Neyra[39m[32m"[39m,
+        [34musername[39m: [32m"[39m[32mlNeyra[39m[32m"[39m,
+        [34mroles[39m: [34;4mIlluminate\Database\Eloquent\Collection[39;24m {#8868
+          [34mall[39m: [
+            [34;4mSpatie\Permission\Models\Role[39;24m {#9335
+              [34mid[39m: [35m3[39m,
+              [34mname[39m: [32m"[39m[32mGerencia General[39m[32m"[39m,
+              [34mguard_name[39m: [32m"[39m[32mweb[39m[32m"[39m,
+              [34mcreated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mupdated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mpivot[39m: [34;4mIlluminate\Database\Eloquent\Relations\MorphPivot[39;24m {#8899
+                [34mmodel_type[39m: [32m"[39m[32mApp[39m\\[32mModels[39m\\[32mUser[39m[32m"[39m,
+                [34mmodel_id[39m: [35m3[39m,
+                [34mrole_id[39m: [35m3[39m,
+              },
+            },
+          ],
+        },
+      },
+      [34;4mApp\Models\User[39;24m {#8873
+        [34mid[39m: [35m4[39m,
+        [34mname[39m: [32m"[39m[32mSara Sanchez[39m[32m"[39m,
+        [34musername[39m: [32m"[39m[32msSanchez[39m[32m"[39m,
+        [34mroles[39m: [34;4mIlluminate\Database\Eloquent\Collection[39;24m {#9359
+          [34mall[39m: [
+            [34;4mSpatie\Permission\Models\Role[39;24m {#9334
+              [34mid[39m: [35m4[39m,
+              [34mname[39m: [32m"[39m[32mAdministración[39m[32m"[39m,
+              [34mguard_name[39m: [32m"[39m[32mweb[39m[32m"[39m,
+              [34mcreated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mupdated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mpivot[39m: [34;4mIlluminate\Database\Eloquent\Relations\MorphPivot[39;24m {#8900
+                [34mmodel_type[39m: [32m"[39m[32mApp[39m\\[32mModels[39m\\[32mUser[39m[32m"[39m,
+                [34mmodel_id[39m: [35m4[39m,
+                [34mrole_id[39m: [35m4[39m,
+              },
+            },
+          ],
+        },
+      },
+      [34;4mApp\Models\User[39;24m {#8874
+        [34mid[39m: [35m5[39m,
+        [34mname[39m: [32m"[39m[32mRodrigo Vasquez[39m[32m"[39m,
+        [34musername[39m: [32m"[39m[32mrVasquez[39m[32m"[39m,
+        [34mroles[39m: [34;4mIlluminate\Database\Eloquent\Collection[39;24m {#9347
+          [34mall[39m: [
+            [34;4mSpatie\Permission\Models\Role[39;24m {#9333
+              [34mid[39m: [35m5[39m,
+              [34mname[39m: [32m"[39m[32mLogística[39m[32m"[39m,
+              [34mguard_name[39m: [32m"[39m[32mweb[39m[32m"[39m,
+              [34mcreated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mupdated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mpivot[39m: [34;4mIlluminate\Database\Eloquent\Relations\MorphPivot[39;24m {#8889
+                [34mmodel_type[39m: [32m"[39m[32mApp[39m\\[32mModels[39m\\[32mUser[39m[32m"[39m,
+                [34mmodel_id[39m: [35m5[39m,
+                [34mrole_id[39m: [35m5[39m,
+              },
+            },
+          ],
+        },
+      },
+      [34;4mApp\Models\User[39;24m {#8875
+        [34mid[39m: [35m6[39m,
+        [34mname[39m: [32m"[39m[32mYoana Coronado[39m[32m"[39m,
+        [34musername[39m: [32m"[39m[32myCoronado[39m[32m"[39m,
+        [34mroles[39m: [34;4mIlluminate\Database\Eloquent\Collection[39;24m {#9354
+          [34mall[39m: [
+            [34;4mSpatie\Permission\Models\Role[39;24m {#9332
+              [34mid[39m: [35m6[39m,
+              [34mname[39m: [32m"[39m[32mTesorería[39m[32m"[39m,
+              [34mguard_name[39m: [32m"[39m[32mweb[39m[32m"[39m,
+              [34mcreated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mupdated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mpivot[39m: [34;4mIlluminate\Database\Eloquent\Relations\MorphPivot[39;24m {#8891
+                [34mmodel_type[39m: [32m"[39m[32mApp[39m\\[32mModels[39m\\[32mUser[39m[32m"[39m,
+                [34mmodel_id[39m: [35m6[39m,
+                [34mrole_id[39m: [35m6[39m,
+              },
+            },
+          ],
+        },
+      },
+      [34;4mApp\Models\User[39;24m {#8876
+        [34mid[39m: [35m7[39m,
+        [34mname[39m: [32m"[39m[32mOlenka Gonzales[39m[32m"[39m,
+        [34musername[39m: [32m"[39m[32moGonzales[39m[32m"[39m,
+        [34mroles[39m: [34;4mIlluminate\Database\Eloquent\Collection[39;24m {#9352
+          [34mall[39m: [
+            [34;4mSpatie\Permission\Models\Role[39;24m {#9331
+              [34mid[39m: [35m7[39m,
+              [34mname[39m: [32m"[39m[32mSistemas[39m[32m"[39m,
+              [34mguard_name[39m: [32m"[39m[32mweb[39m[32m"[39m,
+              [34mcreated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mupdated_at[39m: [32m"[39m[32m2026-08-31 02:39:43[39m[32m"[39m,
+              [34mpivot[39m: [34;4mIlluminate\Database\Eloquent\Relations\MorphPivot[39;24m {#8893
+                [34mmodel_type[39m: [32m"[39m[32mApp[39m\\[32mModels[39m\\[32mUser[39m[32m"[39m,
+                [34mmodel_id[39m: [35m7[39m,
+                [34mrole_id[39m: [35m7[39m,
+              },
+            },
+          ],
+        },
+      },
+    ],
+  }

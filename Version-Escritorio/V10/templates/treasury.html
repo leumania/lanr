@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block body_class %}page-treasury{% endblock %}
+{% block title %}Tesorería | LANR{% endblock %}
+{% block content %}
+<div class="treasury-head"><h1>Tesorería</h1><p>Pagos de requerimientos, Solicitudes de Pago y devoluciones que requieren atención o consulta.</p></div>
+<div class="treasury-kpis">
+  <div class="treasury-kpi"><span>Pagos REQ pendientes</span><strong>{{ pagos_compra|selectattr('estado','equalto','Pendiente')|list|length }}</strong></div>
+  <div class="treasury-kpi"><span>SP pendientes</span><strong>{{ sp_pagos|selectattr('estado','in',['Asignada a Tesorería','Pago parcial'])|list|length if sp_pagos else 0 }}</strong></div>
+  <div class="treasury-kpi"><span>Reembolsos / rendiciones</span><strong>{{ rr_pendientes }}</strong></div>
+</div>
+
+<div class="treasury-section"><h2>Solicitudes de Pago</h2><p class="sub">Solicitudes que Administración asignó a Tesorería. Pueden atenderse en uno o varios pagos.</p>
+{% if sp_pagos %}<table class="treasury-table"><thead><tr><th>ORIGEN</th><th>BENEFICIARIO</th><th>FECHA</th><th>ABONO</th><th>PAGADO</th><th>ESTADO</th><th></th></tr></thead><tbody>{% for s in sp_pagos %}<tr><td><strong>{{ s.tracking }}</strong><br><small>{{ s.numero }}</small></td><td>{{ s.beneficiario }}</td><td>{{ s.fecha }}</td><td><strong>{{ 'US$' if s.moneda=='USD' else 'S/' }} {{ '%.2f'|format(s.abono or 0) }}</strong></td><td>{{ 'US$' if s.moneda=='USD' else 'S/' }} {{ '%.2f'|format(s.pagado or 0) }}</td><td><span class="status-pill {{ 'pending' if s.estado in ['Asignada a Tesorería','Pago parcial'] else 'done' }}">{{ s.estado }}</span></td><td><a class="btn primary" href="{{ url_for('request_detail',tid=s.id) }}">{{ 'Atender' if s.estado in ['Asignada a Tesorería','Pago parcial'] else 'Ver' }}</a></td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">No hay Solicitudes de Pago asignadas a Tesorería.</div>{% endif %}</div>
+
+<div class="treasury-section"><h2>Pagos de requerimientos</h2><p class="sub">Cada autorización de Administración puede generar uno o varios pagos, según los proveedores seleccionados.</p>
+{% if pagos_compra %}<table class="treasury-table"><thead><tr><th>REQUERIMIENTO</th><th>PROVEEDOR</th><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th></th></tr></thead><tbody>{% for s in pagos_compra %}<tr><td><strong>{{ s.tracking }}</strong></td><td>{{ s.proveedor_nombre or s.motivo or '-' }}</td><td>{{ s.fecha_solicitud }}</td><td><strong>S/ {{ '%.2f'|format(s.monto or 0) }}</strong></td><td><span class="status-pill {{ 'done' if s.estado=='Atendido' else 'pending' }}">{{ s.estado }}</span></td><td><a class="btn primary" href="{{ url_for('treasury_detail',sid=s.id) }}">{{ 'Ver' if s.estado!='Pendiente' else 'Atender' }}</a></td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">No hay pagos de requerimientos registrados.</div>{% endif %}</div>
+
+<div class="treasury-section"><h2>Reembolsos y rendiciones</h2><p class="sub">Las solicitudes independientes autorizadas por Administración se atienden en su módulo.</p><a class="btn" href="{{ url_for('reimbursements') }}"><i class="fa-solid fa-arrow-right"></i> Abrir Reembolsos / Rendiciones{% if rr_pendientes %} · {{ rr_pendientes }} pendiente{% if rr_pendientes!=1 %}s{% endif %}{% endif %}</a></div>
+
+{% if reembolsos %}<div class="treasury-section"><h2>Reembolsos antiguos ligados a REQ</h2><p class="sub">Registros heredados del flujo anterior; se conservan para consulta hasta su cierre.</p><table class="treasury-table"><thead><tr><th>REQUERIMIENTO</th><th>PERSONA</th><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th></th></tr></thead><tbody>{% for s in reembolsos %}<tr><td><strong>{{ s.tracking }}</strong></td><td>{{ s.solicitado_por_nombre or '-' }}</td><td>{{ s.fecha_solicitud }}</td><td><strong>S/ {{ '%.2f'|format(s.monto or 0) }}</strong></td><td><span class="status-pill pending">Pendiente heredado</span></td><td><a class="btn" href="{{ url_for('treasury_detail',sid=s.id) }}">Ver</a></td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% endblock %}
