@@ -652,18 +652,46 @@ new class extends Component
     public array $envio = [
         'guia_numero' => '',
         'guia_fecha' => '',
-        'guia_pendiente' => false,
+        'guia_opcion' => 'adjuntar',
+        'medio_envio' => 'Chofer de LANR',
+        'responsable_transporte' => '',
+        'costo_envio' => '',
+        'observacion_envio' => '',
     ];
     public array $archivos_guia = [];
+    public array $evidencias_envio = [];
+    public array $comprobantes_transporte = [];
 
     public function enviarAObra(): void
     {
         $user = auth()->user();
         abort_unless($user->hasAnyRole(['Logística', 'Sistemas']), 403);
 
+        if (in_array($this->tramite->estado, ['Enviado a obra', 'Cerrado'], true)) {
+            session()->flash('error', 'Este requerimiento ya fue enviado a obra.');
+
+            return;
+        }
+
+        $guiaAdjunta = $this->envio['guia_opcion'] === 'adjuntar';
+
         $this->validate([
-            'archivos_guia' => 'array|max:10',
+            'envio.medio_envio' => 'required|in:Chofer de LANR,Encomienda,Transporte del proveedor,Otro',
+            'envio.responsable_transporte' => 'nullable|string|max:150',
+            'envio.costo_envio' => 'nullable|numeric|min:0',
+            'envio.observacion_envio' => 'nullable|string',
+            'envio.guia_opcion' => 'required|in:adjuntar,pendiente',
+            'envio.guia_numero' => $guiaAdjunta ? 'required|string|max:100' : 'nullable|string|max:100',
+            'envio.guia_fecha' => $guiaAdjunta ? 'required|date' : 'nullable|date',
+            'archivos_guia' => $guiaAdjunta ? 'required|array|min:1|max:10' : 'array|max:10',
             'archivos_guia.*' => 'file|mimes:pdf,jpg,jpeg,png,webp,xml|max:10240',
+            'evidencias_envio' => 'required|array|min:1|max:10',
+            'evidencias_envio.*' => 'file|image|mimes:jpg,jpeg,png,webp|max:10240',
+            'comprobantes_transporte' => 'array|max:10',
+            'comprobantes_transporte.*' => 'file|mimes:pdf,jpg,jpeg,png,webp,xml|max:10240',
+        ], [
+            'archivos_guia.required' => 'Adjunta la guía de remisión o marca la opción "pendiente de regularización".',
+            'evidencias_envio.required' => 'Debes adjuntar al menos una evidencia fotográfica del envío.',
         ]);
 
         $gestion = $this->tramite->gestionLogistica;
@@ -673,11 +701,15 @@ new class extends Component
             return;
         }
 
-        DB::transaction(function () use ($user, $gestion) {
+        DB::transaction(function () use ($user, $gestion, $guiaAdjunta) {
             $gestion->update([
-                'guia_numero' => $this->envio['guia_numero'],
-                'guia_fecha' => $this->envio['guia_fecha'] ?: null,
-                'guia_pendiente' => $this->envio['guia_pendiente'],
+                'guia_numero' => $guiaAdjunta ? $this->envio['guia_numero'] : null,
+                'guia_fecha' => $guiaAdjunta ? ($this->envio['guia_fecha'] ?: null) : null,
+                'guia_pendiente' => ! $guiaAdjunta,
+                'medio_envio' => $this->envio['medio_envio'],
+                'responsable_transporte' => $this->envio['responsable_transporte'] ?: null,
+                'costo_envio' => $this->envio['costo_envio'] !== '' ? $this->envio['costo_envio'] : null,
+                'observacion_envio' => $this->envio['observacion_envio'] ?: null,
                 'enviado_fecha' => now(),
             ]);
 
@@ -690,12 +722,41 @@ new class extends Component
                 ]);
             }
 
+            foreach ($this->evidencias_envio as $archivo) {
+                \App\Models\ArchivoLogistica::create([
+                    'tramite_id' => $this->tramite->id,
+                    'tipo' => 'evidencia_envio',
+                    'nombre_original' => $archivo->getClientOriginalName(),
+                    'nombre_archivo' => $archivo->store('archivos-logistica', 'public'),
+                ]);
+            }
+
+            foreach ($this->comprobantes_transporte as $archivo) {
+                \App\Models\ArchivoLogistica::create([
+                    'tramite_id' => $this->tramite->id,
+                    'tipo' => 'comprobante_transporte',
+                    'nombre_original' => $archivo->getClientOriginalName(),
+                    'nombre_archivo' => $archivo->store('archivos-logistica', 'public'),
+                ]);
+            }
+
+            if (! $guiaAdjunta) {
+                Regularizacion::create([
+                    'tramite_id' => $this->tramite->id,
+                    'responsable_id' => $user->id,
+                    'tipo' => 'Guía de remisión',
+                    'descripcion' => 'Adjuntar la guía de remisión pendiente del envío a obra.',
+                    'estado' => 'Pendiente',
+                    'fecha_creacion' => now(),
+                ]);
+            }
+
             $this->tramite->update(['estado' => 'Enviado a obra']);
 
             History::create([
                 'tramite_id' => $this->tramite->id,
                 'usuario_id' => $user->id,
-                'accion' => 'Requerimiento enviado a obra',
+                'accion' => 'Requerimiento enviado a obra vía '.$this->envio['medio_envio'],
             ]);
 
             $this->notificarRoles(
@@ -1111,12 +1172,40 @@ new class extends Component
 
                     <form wire:submit="enviarAObra" class="mt-3 flex flex-col gap-4">
                         <flux:heading size="sm">Enviar a obra</flux:heading>
+
+                        @if (session('error'))
+                            <flux:callout variant="danger" heading="{{ session('error') }}" />
+                        @endif
+
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <flux:input label="N° de guía" wire:model="envio.guia_numero" />
-                            <flux:input type="date" label="Fecha de guía" wire:model="envio.guia_fecha" />
+                            <flux:select label="Medio de envío" wire:model="envio.medio_envio">
+                                <flux:select.option value="Chofer de LANR">Chofer de LANR</flux:select.option>
+                                <flux:select.option value="Encomienda">Encomienda</flux:select.option>
+                                <flux:select.option value="Transporte del proveedor">Transporte del proveedor</flux:select.option>
+                                <flux:select.option value="Otro">Otro</flux:select.option>
+                            </flux:select>
+                            <flux:input label="Responsable del transporte" wire:model="envio.responsable_transporte" />
+                            <flux:input type="number" step="0.01" label="Costo de envío (opcional)" wire:model="envio.costo_envio" />
                         </div>
-                        <flux:checkbox wire:model="envio.guia_pendiente" label="Guía pendiente de regularización" />
-                        <div><flux:label>Guía o evidencia de despacho (opcional)</flux:label><input type="file" wire:model="archivos_guia" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full text-sm" />@error('archivos_guia.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
+                        <flux:textarea label="Observación del envío (opcional)" wire:model="envio.observacion_envio" />
+
+                        <flux:radio.group label="Guía de remisión" wire:model.live="envio.guia_opcion">
+                            <flux:radio value="adjuntar" label="Adjuntar guía ahora" />
+                            <flux:radio value="pendiente" label="Guía pendiente de regularización" />
+                        </flux:radio.group>
+
+                        @if ($envio['guia_opcion'] === 'adjuntar')
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <flux:input label="N° de guía" wire:model="envio.guia_numero" />
+                                <flux:input type="date" label="Fecha de guía" wire:model="envio.guia_fecha" />
+                            </div>
+                            <div><flux:label>Archivo(s) de guía</flux:label><input type="file" wire:model="archivos_guia" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full text-sm" />@error('archivos_guia') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror @error('archivos_guia.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
+                        @endif
+
+                        <div><flux:label>Evidencia fotográfica del envío</flux:label><input type="file" wire:model="evidencias_envio" multiple accept=".jpg,.jpeg,.png,.webp" class="mt-1 block w-full text-sm" />@error('evidencias_envio') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror @error('evidencias_envio.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
+
+                        <div><flux:label>Comprobantes de transporte (opcional)</flux:label><input type="file" wire:model="comprobantes_transporte" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full text-sm" /></div>
+
                         <div>
                             <flux:button type="submit" variant="primary">Enviar a obra</flux:button>
                         </div>

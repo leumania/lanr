@@ -14,6 +14,7 @@ class GestionLogistica extends Model
         'fecha_compra', 'tipo_comprobante', 'nro_comprobante', 'monto',
         'comprobante_pendiente', 'forma_pago', 'estado_pago', 'guia_numero',
         'guia_fecha', 'guia_pendiente', 'enviado_fecha', 'requiere_reembolso',
+        'medio_envio', 'responsable_transporte', 'costo_envio', 'observacion_envio',
     ];
 
     protected function casts(): array
