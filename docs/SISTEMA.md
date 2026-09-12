@@ -57,16 +57,19 @@ Cada cambio funcional debe actualizar:
 
 ## Funcionalidades implementadas en la migracion
 
-- Adjuntos generales para requerimientos y solicitudes de pago.
-- Descarga protegida de documentos desde el expediente.
-- Pago de compras de requerimientos por Tesoreria con comprobante.
-- Regularizaciones con documento obligatorio y fecha de cierre.
+- Adjuntos generales para requerimientos y solicitudes de pago, con vista en linea y descarga protegida.
+- Pago de compras de requerimientos por Tesoreria con comprobante (multiple), o por Caja Logistica / pago personal a reembolsar, con el umbral de S/ 1,900 que obliga a tramitar por Tesoreria por encima de ese monto.
+- Regularizaciones de compra (documento y detalle obligatorios, deben cuadrar con los comprobantes) y de guia de remision (se abre automaticamente cuando el envio a obra queda con guia pendiente).
+- Envio a obra con medio de transporte, responsable, costo, evidencia fotografica obligatoria y comprobantes de transporte opcionales.
 - PDF de requerimiento y PDF de solicitud de pago.
-- Solicitudes de pago de compras y atención por Tesoreria con comprobante.
-- Archivos de respaldo, comprobantes y guias vinculados al expediente.
+- Flujo completo de reembolsos personales (registro, autorizacion de Administracion, atencion de Tesoreria con evidencia), con numero unico por obra.
+- Notificaciones en cada transicion relevante del flujo (aprobaciones, asignacion y cierre de pagos SP, compra autorizada, pago de compra, envio y recepcion en obra); se marcan como leidas al abrir cada una.
+- Multi-obra: numeracion de tracking y resolucion de aprobadores/roles siempre scoped a la obra activa, no al primer usuario global con ese rol.
+- Bloqueo de cuentas desactivadas (login y sesion activa), y autorizacion de pagos SP por rol (Gerencia General / Tesoreria), no por cuentas especificas.
 
-## Pendientes de paridad con V1
+## Pendientes de paridad con V1 / mejoras conocidas
 
-- Adjuntos especificos de cada etapa logistica (cotizacion, comprobante y guia).
-- Flujo completo de reembolsos personales.
-- Paridad visual exacta con todos los formatos de la V1.
+- Paridad visual exacta con todos los formatos de la V1 (la solicitud de pago en PDF aun no anexa comprobantes/adjuntos como un solo documento, ni replica moneda/amortizacion/cuentas bancarias del formato original).
+- Los archivos subidos (adjuntos, comprobantes, regularizaciones) se sirven desde el disco `public` de Laravel: la ruta autenticada `tramites.attachments.download` valida acceso, pero el archivo tambien es alcanzable sin autenticacion via `/storage/...` si se conoce la ruta generada. Evaluar mover a un disco privado con streaming autenticado.
+- El formulario de creacion de requerimientos no expone aun prioridad/fecha requerida por item ni el catalogo de unidades (si estan disponibles al editar).
+- La politica de complejidad de contrasena (`Password::defaults`) solo se exige en produccion; fuera de produccion no hay ninguna regla minima.
