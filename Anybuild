@@ -14,8 +14,8 @@
 # Wasmer builder over its memory limit.
 
 load("//anybuild/tools:node.bzl", "node_build_step", "node_install_steps", "node_toolchain")
-load("//anybuild/tools:php.bzl", "php_build")
-load("//anybuild/tools:laravel.bzl", "laravel_config", "laravel_serve")
+load("//anybuild/tools:php.bzl", "php_build", "php_serve")
+load("//anybuild/tools:laravel.bzl", "laravel_config")
 
 def laravel_build_no_dev(config, app = None, assets = None):
     node_tc = node_toolchain(config, serving = False)
@@ -35,6 +35,31 @@ def laravel_build_no_dev(config, app = None, assets = None):
         extra_ignore = ["node_modules"],
     )
 
+def laravel_serve_forced_migrate(config, build):
+    # laravel_serve()'s default `after_deploy` runs `php artisan migrate`
+    # without `--force`. In APP_ENV=production, Laravel's ConfirmableTrait
+    # refuses to run a destructive command non-interactively without
+    # --force, so the migration silently never runs and the app boots
+    # against a database with no tables. We add --force, and additionally
+    # run migrate again right before the server starts, as a safety net in
+    # case after_deploy runs before the database is fully reachable.
+    return php_serve(
+        config,
+        build,
+        commands = {
+            "start": "php artisan migrate --force && php -S 0.0.0.0:{} -t public".format(config.port),
+            "after_deploy": "php artisan migrate --force",
+        },
+        prepare = [
+            workdir(build.app.serve_path),
+            run("mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs bootstrap/cache"),
+            run("php artisan config:cache"),
+            run("php artisan event:cache"),
+            run("php artisan route:cache"),
+            run("php artisan view:cache"),
+        ],
+    )
+
 config = laravel_config(
     schema = 1,
     node_package_manager = "npm",
@@ -49,4 +74,4 @@ config = laravel_config(
 
 build = laravel_build_no_dev(config)
 
-laravel_serve(config, build)
+laravel_serve_forced_migrate(config, build)
