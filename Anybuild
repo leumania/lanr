@@ -40,14 +40,18 @@ def laravel_serve_forced_migrate(config, build):
     # without `--force`. In APP_ENV=production, Laravel's ConfirmableTrait
     # refuses to run a destructive command non-interactively without
     # --force, so the migration silently never runs and the app boots
-    # against a database with no tables. We add --force, and additionally
-    # run migrate again right before the server starts, as a safety net in
-    # case after_deploy runs before the database is fully reachable.
+    # against a database with no tables. We add --force here.
+    #
+    # `start` is intentionally left as the plain server command: chaining
+    # `php artisan migrate --force` in front of it (even with `;`, not
+    # `&&`) made the deploy runtime (phpix, a WASM PHP build) fail to come
+    # up at all, turning a diagnosable Laravel error into an opaque
+    # "Application: Error" from Wasmer Edge itself.
     return php_serve(
         config,
         build,
         commands = {
-            "start": "php artisan migrate --force; php -S 0.0.0.0:{} -t public".format(config.port),
+            "start": "php -S 0.0.0.0:{} -t public".format(config.port),
             "after_deploy": "php artisan migrate --force",
         },
         prepare = [
