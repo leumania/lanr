@@ -47,7 +47,7 @@ def laravel_serve_forced_migrate(config, build):
         config,
         build,
         commands = {
-            "start": "php artisan migrate --force && php -S 0.0.0.0:{} -t public".format(config.port),
+            "start": "php artisan migrate --force; php -S 0.0.0.0:{} -t public".format(config.port),
             "after_deploy": "php artisan migrate --force",
         },
         prepare = [
