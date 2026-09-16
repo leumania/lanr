@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-2 border-b border-zinc-200 pb-6 dark:border-zinc-700 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <flux:heading size="xl">Ayuda del sistema</flux:heading>
-                <flux:text class="mt-1 text-zinc-500">Guía operativa para LANR Inversiones · versión 2.0</flux:text>
+                <flux:text class="mt-1 text-zinc-500">Guía operativa para LANR Inversiones · versión 2.1</flux:text>
             </div>
             <flux:badge color="green">Rol: {{ auth()->user()->getRoleNames()->join(', ') ?: 'Usuario' }}</flux:badge>
         </div>
@@ -14,6 +14,8 @@
                     <a href="#inicio" class="rounded-md px-3 py-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-800">Inicio</a>
                     <a href="#requerimientos" class="rounded-md px-3 py-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-800">Requerimientos</a>
                     <a href="#solicitudes" class="rounded-md px-3 py-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-800">Solicitudes de pago</a>
+                    <a href="#ordenes" class="rounded-md px-3 py-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-800">Órdenes</a>
+                    <a href="#reembolsos" class="rounded-md px-3 py-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-800">Reembolsos / Rendiciones</a>
                     @if (auth()->user()->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento', 'Sistemas']))
                         <a href="#aprobaciones" class="rounded-md px-3 py-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-800">Aprobaciones</a>
                     @endif
@@ -36,7 +38,7 @@
             <main class="space-y-6">
                 <section id="inicio" class="scroll-mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-700">
                     <flux:heading size="lg">Cómo funciona el sistema</flux:heading>
-                    <flux:text class="mt-2">LANR centraliza requerimientos de materiales y solicitudes de pago de la obra La Vega. Cada operación registra usuario, fecha, estado e historial.</flux:text>
+                    <flux:text class="mt-2">LANR centraliza los trámites de la obra activa: requerimientos de materiales, solicitudes de pago, órdenes de compra/servicio y reembolsos o rendiciones. Cada operación registra usuario, fecha, estado e historial.</flux:text>
                     <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         @foreach ([['1', 'Registrar', 'El creador ingresa el trámite y sus conceptos.'], ['2', 'Revisar', 'Los responsables dan su visto bueno.'], ['3', 'Gestionar', 'Logística, Tesorería o Gerencia ejecutan el proceso.'], ['4', 'Cerrar', 'La recepción o conformidad final cierra el trámite.']] as [$number, $title, $description])
                             <div class="border-l-2 border-emerald-500 pl-3">
@@ -45,6 +47,9 @@
                                 <div class="mt-1 text-sm text-zinc-500">{{ $description }}</div>
                             </div>
                         @endforeach
+                    </div>
+                    <div class="mt-5 rounded-md bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+                        <strong>Obra activa:</strong> si tienes acceso a más de una obra, selecciónala en el encabezado superior. Todo lo que ves y registras (trámites, órdenes, reembolsos, tesorería) corresponde a la obra activa.
                     </div>
                 </section>
 
@@ -69,6 +74,27 @@
                     </ul>
                 </section>
 
+                <section id="ordenes" class="scroll-mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-700">
+                    <flux:heading size="lg">Órdenes de compra y servicio</flux:heading>
+                    <ul class="mt-3 list-disc space-y-2 ps-5 text-sm text-zinc-600 marker:text-emerald-500 dark:text-zinc-300">
+                        <li>Gerencia de Obra, Administración y Sistemas pueden registrar una orden desde <strong>Órdenes</strong>, eligiendo el tipo: <strong>Orden de compra</strong> u <strong>Orden de servicio</strong>.</li>
+                        <li>El número se asigna automáticamente según el último registrado para ese tipo en la obra activa y no se puede modificar.</li>
+                        <li>El detalle usa las unidades del catálogo de <strong>Unidades</strong> y la moneda del catálogo de <strong>Monedas</strong>. El total de la orden debe coincidir con la suma del detalle.</li>
+                        <li>Se pueden adjuntar hasta 5 documentos en PDF o imagen (JPG, PNG o WEBP).</li>
+                        <li>La orden queda en <strong>Pendiente de aprobación</strong> y reúne el visto bueno de Gerencia de Obra, Administración y Gerencia General, en ese orden. Al completarse los tres, pasa a <strong>Aprobada</strong>.</li>
+                    </ul>
+                </section>
+
+                <section id="reembolsos" class="scroll-mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-700">
+                    <flux:heading size="lg">Reembolsos / Rendiciones</flux:heading>
+                    <ul class="mt-3 list-disc space-y-2 ps-5 text-sm text-zinc-600 marker:text-emerald-500 dark:text-zinc-300">
+                        <li>Cualquier responsable de obra (Gerencia de Obra, Control y Planeamiento, Administración, Logística, Tesorería, Contabilidad o Sistemas) puede registrar un <strong>Reembolso</strong> (dinero propio adelantado) o una <strong>Rendición</strong> (fondos entregados por la empresa) desde <strong>Reembolsos / Rendiciones</strong>.</li>
+                        <li>Se indica concepto, monto, moneda y, opcionalmente, hasta 10 sustentos en PDF o imagen.</li>
+                        <li>Administración, Gerencia General o Sistemas autorizan el registro (queda en <strong>Autorizado</strong>).</li>
+                        <li>Tesorería o Sistemas atienden el pago adjuntando la evidencia de atención; el registro pasa a <strong>Atendido</strong>.</li>
+                    </ul>
+                </section>
+
                 @if (auth()->user()->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento', 'Sistemas']))
                     <section id="aprobaciones" class="scroll-mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-700">
                         <flux:heading size="lg">Aprobaciones y recepción en obra</flux:heading>
@@ -85,7 +111,7 @@
                         <flux:heading size="lg">Gestión de Logística</flux:heading>
                         <ul class="mt-3 list-disc space-y-2 ps-5 text-sm text-zinc-600 marker:text-emerald-500 dark:text-zinc-300">
                             <li>Recibe los requerimientos aprobados y registra fecha, comprobante y monto de compra.</li>
-                            <li>Si falta documentación, marca la regularización pendiente. El sistema mantiene el pendiente en el expediente.</li>
+                            <li>Si falta documentación, marca la regularización pendiente. Estos pendientes se listan en <strong>Regularizaciones</strong>, ordenados por responsable, hasta que se completan.</li>
                             <li>Una compra pagada puede enviarse a obra con número y fecha de guía. El pago debe estar registrado antes del despacho.</li>
                             <li>Las operaciones se reflejan en la bandeja de pendientes y en el historial del trámite.</li>
                             <li>Los comprobantes y guías pueden adjuntarse durante cada etapa y quedan disponibles en el expediente.</li>
@@ -97,10 +123,11 @@
                     <section id="tesoreria" class="scroll-mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-700">
                         <flux:heading size="lg">Tesorería</flux:heading>
                         <ul class="mt-3 list-disc space-y-2 ps-5 text-sm text-zinc-600 marker:text-emerald-500 dark:text-zinc-300">
-                            <li>Las solicitudes asignadas aparecen en la bandeja de Tesorería.</li>
+                            <li>Las solicitudes de pago asignadas y los reembolsos autorizados aparecen en <strong>Tesorería</strong>, junto con el monto pendiente total.</li>
                             <li>Verifica el monto, registra medio, banco, fecha y número de operación, y adjunta el comprobante.</li>
                             <li>Una vez registrado el pago, Gerencia General recibe la solicitud para su conformidad final.</li>
                             <li>Los pagos de compras requieren comprobante y quedan vinculados al trámite.</li>
+                            <li>Los reembolsos/rendiciones autorizados se atienden adjuntando la evidencia de atención desde la misma bandeja.</li>
                         </ul>
                     </section>
                 @endif
@@ -112,6 +139,8 @@
                             <li>Revisa solicitudes con aprobaciones completas y decide quién realizará el pago.</li>
                             <li>Cuando el pago fue registrado, revisa el comprobante y confirma la conformidad final.</li>
                             <li>La conformidad final cambia el estado a <strong>Cerrado</strong>.</li>
+                            <li>También otorga el visto bueno final de las órdenes de compra/servicio, junto con Gerencia de Obra y Administración, y puede autorizar reembolsos y rendiciones.</li>
+                            <li>Puede registrar nuevas obras desde <strong>Obras</strong>.</li>
                         </ul>
                     </section>
                 @endif
@@ -120,8 +149,10 @@
                     <section id="sistemas" class="scroll-mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-700">
                         <flux:heading size="lg">Sistemas</flux:heading>
                         <ul class="mt-3 list-disc space-y-2 ps-5 text-sm text-zinc-600 marker:text-emerald-500 dark:text-zinc-300">
-                            <li>Sistemas puede consultar y asistir operaciones, aprobar cuando corresponda y administrar usuarios.</li>
-                            <li>La administración de usuarios permite activar, desactivar y restablecer accesos según las políticas internas.</li>
+                            <li>Sistemas puede consultar y asistir cualquier operación, aprobar cuando corresponda y administrar todo el sistema.</li>
+                            <li><strong>Usuarios:</strong> crear cuentas, asignar rol y obras de acceso, activar/desactivar y restablecer contraseñas (el usuario deberá cambiarla en su siguiente ingreso).</li>
+                            <li><strong>Unidades</strong> y <strong>Monedas:</strong> catálogos administrables que alimentan los desplegables de unidad y moneda en requerimientos, solicitudes de pago y órdenes. Cada elemento puede desactivarse (o eliminarse si no está en uso).</li>
+                            <li><strong>Obras:</strong> registrar nuevas obras y activar o desactivar las existentes.</li>
                             <li>Las acciones de asistencia quedan identificadas en el historial con el usuario que las ejecutó.</li>
                         </ul>
                     </section>
@@ -129,8 +160,30 @@
 
                 <section id="estados" class="scroll-mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-700">
                     <flux:heading size="lg">Estados del proceso</flux:heading>
-                    <div class="mt-4 grid gap-2 sm:grid-cols-2">
+
+                    <div class="mt-4 text-xs font-bold tracking-wide text-zinc-400 uppercase">Requerimientos y solicitudes de pago</div>
+                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
                         @foreach ([['Pendiente de aprobación', 'Faltan vistos buenos asignados.'], ['Aprobado', 'El requerimiento puede pasar a Logística.'], ['Recibido por Logística', 'Logística confirmó la recepción.'], ['En gestión de compra', 'La compra fue registrada.'], ['Enviado a obra', 'La compra está pagada y fue despachada.'], ['Pendiente asignación de pago', 'Gerencia debe asignar el responsable.'], ['Pagada pendiente conformidad GG', 'El pago existe y espera revisión final.'], ['Cerrado', 'El flujo terminó correctamente.']] as [$state, $description])
+                            <div class="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+                                <div class="font-medium">{{ $state }}</div>
+                                <div class="text-sm text-zinc-500">{{ $description }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-5 text-xs font-bold tracking-wide text-zinc-400 uppercase">Órdenes de compra y servicio</div>
+                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                        @foreach ([['Pendiente de aprobación', 'Falta el visto bueno de Gerencia de Obra, Administración o Gerencia General.'], ['Aprobada', 'Los tres vistos buenos fueron registrados.']] as [$state, $description])
+                            <div class="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+                                <div class="font-medium">{{ $state }}</div>
+                                <div class="text-sm text-zinc-500">{{ $description }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-5 text-xs font-bold tracking-wide text-zinc-400 uppercase">Reembolsos / Rendiciones</div>
+                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                        @foreach ([['Pendiente', 'Registrado y a la espera de autorización.'], ['Autorizado', 'Administración, Gerencia General o Sistemas lo autorizaron; queda por atender en Tesorería.'], ['Atendido', 'Tesorería registró el pago y adjuntó la evidencia de atención.']] as [$state, $description])
                             <div class="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
                                 <div class="font-medium">{{ $state }}</div>
                                 <div class="text-sm text-zinc-500">{{ $description }}</div>
