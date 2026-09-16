@@ -78,7 +78,7 @@ new class extends Component
                         <span class="text-[11px] text-zinc-400">{{ $n->created_at->diffForHumans() }}</span>
                     </a>
                 @empty
-                    <div class="px-3 py-6 text-center text-sm text-zinc-500">
+                    <div class="px-3 py-4 text-center text-sm text-zinc-500">
                         No tienes notificaciones.
                     </div>
                 @endforelse

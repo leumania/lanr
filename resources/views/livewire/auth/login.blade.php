@@ -1,5 +1,5 @@
 <x-layouts::auth.corporate :title="__('Log in')">
-    <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-4">
         <div>
             <div class="text-[10px] font-bold tracking-[1.2px] text-[#b51f27]">
                 {{ __('ACCESO CORPORATIVO') }}
@@ -19,7 +19,7 @@
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
-        <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-5">
+        <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-4">
             @csrf
 
             <!-- Usuario -->

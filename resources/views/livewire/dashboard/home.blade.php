@@ -1,5 +1,5 @@
-<div class="space-y-4">
-    <div class="flex items-start justify-between gap-4">
+<div class="space-y-3">
+    <div class="flex items-start justify-between gap-3">
         <div>
             <flux:heading size="xl" class="text-[#142f44]">Hola, {{ explode(' ', auth()->user()->name)[0] }}</flux:heading>
             <flux:text class="mt-1 text-zinc-500">Revise sus pendientes y acciones por atender.</flux:text>
@@ -13,7 +13,7 @@
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <flux:card class="flex items-center justify-between p-4">
+        <flux:card class="flex items-center justify-between p-3">
             <div>
                 <flux:text class="text-zinc-500">Trámites activos</flux:text>
                 <flux:heading size="xl" class="mt-1 text-[#142f44]">{{ $activos }}</flux:heading>
@@ -23,7 +23,7 @@
             </div>
         </flux:card>
 
-        <flux:card class="flex items-center justify-between p-4">
+        <flux:card class="flex items-center justify-between p-3">
             <div>
                 <flux:text class="text-zinc-500">Por aprobar</flux:text>
                 <flux:heading size="xl" class="mt-1 text-[#142f44]">{{ $porAprobar }}</flux:heading>
@@ -33,7 +33,7 @@
             </div>
         </flux:card>
 
-        <flux:card class="flex items-center justify-between p-4">
+        <flux:card class="flex items-center justify-between p-3">
             <div>
                 <flux:text class="text-zinc-500">{{ $tercerLabel }}</flux:text>
                 <flux:heading size="xl" class="mt-1 text-[#142f44]">{{ $tercerValor }}</flux:heading>
@@ -43,7 +43,7 @@
             </div>
         </flux:card>
 
-        <flux:card class="flex items-center justify-between p-4">
+        <flux:card class="flex items-center justify-between p-3">
             <div>
                 <flux:text class="text-zinc-500">{{ $cuartoLabel }}</flux:text>
                 <flux:heading size="xl" class="mt-1 text-[#142f44]">{{ $cuartoValor }}</flux:heading>
@@ -54,7 +54,7 @@
         </flux:card>
     </div>
 
-    <flux:card class="p-4">
+    <flux:card class="p-3">
         <div class="flex items-center justify-between">
             <div>
                 <flux:heading size="lg" class="text-[#142f44]">Pendientes de aprobación</flux:heading>
@@ -104,7 +104,7 @@
                 </table>
             </div>
         @else
-            <div class="mt-4 flex flex-col items-center gap-2 py-6 text-center">
+            <div class="mt-3 flex flex-col items-center gap-2 py-4 text-center">
                 <flux:icon.check-circle class="size-8 text-emerald-500" />
                 <flux:text class="font-semibold text-[#142f44] dark:text-white">No tienes aprobaciones pendientes</flux:text>
                 <flux:text class="text-zinc-500">Todos los trámites asignados a ti están atendidos.</flux:text>
@@ -113,7 +113,7 @@
     </flux:card>
 
     @if (auth()->user()->hasRole('Logística'))
-        <flux:card class="p-4">
+        <flux:card class="p-3">
             <flux:heading size="lg" class="text-[#142f44]">Pendientes de Logística</flux:heading>
             <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                 @forelse ($pendientesLogistica as $t)
@@ -125,14 +125,14 @@
                         <flux:badge size="sm" color="blue">{{ $t->pendiente_de }}</flux:badge>
                     </a>
                 @empty
-                    <flux:text class="py-4 text-zinc-500">No hay requerimientos pendientes de Logística.</flux:text>
+                    <flux:text class="py-3 text-zinc-500">No hay requerimientos pendientes de Logística.</flux:text>
                 @endforelse
             </div>
         </flux:card>
     @endif
 
     @if (auth()->user()->hasRole('Gerencia General'))
-        <flux:card class="p-4">
+        <flux:card class="p-3">
             <flux:heading size="lg" class="text-[#142f44]">Solicitudes pendientes de asignar pago</flux:heading>
             <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                 @forelse ($spPendientesAsignacion as $t)
@@ -144,12 +144,12 @@
                         <flux:badge size="sm" color="purple">Asignar pago</flux:badge>
                     </a>
                 @empty
-                    <flux:text class="py-4 text-zinc-500">No hay solicitudes pendientes de asignación.</flux:text>
+                    <flux:text class="py-3 text-zinc-500">No hay solicitudes pendientes de asignación.</flux:text>
                 @endforelse
             </div>
         </flux:card>
 
-        <flux:card class="p-4">
+        <flux:card class="p-3">
             <flux:heading size="lg" class="text-[#142f44]">Solicitudes pendientes de conformidad final</flux:heading>
             <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                 @forelse ($spPendientesConformidad as $t)
@@ -161,14 +161,14 @@
                         <flux:badge size="sm" color="yellow">Confirmar</flux:badge>
                     </a>
                 @empty
-                    <flux:text class="py-4 text-zinc-500">No hay solicitudes pendientes de conformidad.</flux:text>
+                    <flux:text class="py-3 text-zinc-500">No hay solicitudes pendientes de conformidad.</flux:text>
                 @endforelse
             </div>
         </flux:card>
     @endif
 
     @if (auth()->user()->hasRole('Tesorería'))
-        <flux:card class="p-4">
+        <flux:card class="p-3">
             <flux:heading size="lg" class="text-[#142f44]">Solicitudes de pago asignadas a Tesorería</flux:heading>
             <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                 @forelse ($spTesoreria as $t)
@@ -180,7 +180,7 @@
                         <flux:badge size="sm" color="purple">Registrar pago</flux:badge>
                     </a>
                 @empty
-                    <flux:text class="py-4 text-zinc-500">No hay solicitudes asignadas a Tesorería.</flux:text>
+                    <flux:text class="py-3 text-zinc-500">No hay solicitudes asignadas a Tesorería.</flux:text>
                 @endforelse
             </div>
         </flux:card>

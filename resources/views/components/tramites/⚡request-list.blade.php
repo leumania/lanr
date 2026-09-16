@@ -67,12 +67,12 @@ new class extends Component
     }
 };
 ?>
-<div class="p-6">
+<div class="p-4">
     <flux:heading size="xl">Trámites</flux:heading>
-    <flux:text class="mb-6 text-zinc-500">Consulta requerimientos y solicitudes de pago.</flux:text>
+    <flux:text class="mb-4 text-zinc-500">Consulta requerimientos y solicitudes de pago.</flux:text>
 
     @if ($filtro !== 'todos')
-        <div class="mb-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+        <div class="mb-3 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
             <flux:text class="text-emerald-800 dark:text-emerald-200">
                 Filtro activo:
                 <strong>{{ match ($filtro) { 'activos' => 'Trámites activos', 'aprobaciones' => 'Pendientes de mi aprobación', 'oficina' => 'En oficina', 'recibir' => 'Por recibir en obra', default => 'Todos' } }}</strong>
@@ -81,7 +81,7 @@ new class extends Component
         </div>
     @endif
 
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <flux:select label="Tipo de trámite" wire:model.live="tipo">
             <flux:select.option value="Todos">Todos</flux:select.option>
             <flux:select.option value="REQ">Requerimiento</flux:select.option>
@@ -100,41 +100,41 @@ new class extends Component
         <table class="w-full text-sm">
             <thead class="bg-zinc-50 text-left text-xs uppercase text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
                 <tr>
-                    <th class="px-4 py-3">Código</th>
-                    <th class="px-4 py-3">Obra</th>
-                    <th class="px-4 py-3">N°</th>
-                    <th class="px-4 py-3">Tipo</th>
-                    <th class="px-4 py-3">Fecha</th>
-                    <th class="px-4 py-3">Creado por</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3 text-right">Acción</th>
+                    <th class="px-3 py-3">Código</th>
+                    <th class="px-3 py-3">Obra</th>
+                    <th class="px-3 py-3">N°</th>
+                    <th class="px-3 py-3">Tipo</th>
+                    <th class="px-3 py-3">Fecha</th>
+                    <th class="px-3 py-3">Creado por</th>
+                    <th class="px-3 py-3">Estado</th>
+                    <th class="px-3 py-3 text-right">Acción</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
                 @forelse ($tramites as $t)
                     <tr>
-                        <td class="px-4 py-3 font-semibold text-zinc-900 dark:text-white">{{ $t->tracking }}</td>
-                        <td class="px-4 py-3">{{ $t->obra->nombre ?? 'Sin obra' }}</td>
-                        <td class="px-4 py-3">{{ $t->numero }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-3 font-semibold text-zinc-900 dark:text-white">{{ $t->tracking }}</td>
+                        <td class="px-3 py-3">{{ $t->obra->nombre ?? 'Sin obra' }}</td>
+                        <td class="px-3 py-3">{{ $t->numero }}</td>
+                        <td class="px-3 py-3">
                             <flux:badge size="sm" icon="lock-closed">
                                 {{ $t->tipo === 'REQ' ? 'Requerimiento' : 'Solicitud de Pago' }}
                             </flux:badge>
                         </td>
-                        <td class="px-4 py-3">{{ $t->fecha->format('Y-m-d') }}</td>
-                        <td class="px-4 py-3">{{ $t->creador->name }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-3">{{ $t->fecha->format('Y-m-d') }}</td>
+                        <td class="px-3 py-3">{{ $t->creador->name }}</td>
+                        <td class="px-3 py-3">
                             <flux:badge size="sm" :color="$this->estadoColor($t->estado)">
                                 {{ $t->estado }}
                             </flux:badge>
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-3 text-right">
                             <flux:button size="sm" icon="eye" :href="route('tramites.show', $t)" wire:navigate>Ver</flux:button>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-zinc-500">
+                        <td colspan="8" class="px-3 py-6 text-center text-zinc-500">
                             No se encontraron trámites.
                         </td>
                     </tr>
@@ -143,7 +143,7 @@ new class extends Component
         </table>
     </div>
 
-    <div class="mt-4">
+    <div class="mt-3">
         {{ $tramites->links() }}
     </div>
 </div>

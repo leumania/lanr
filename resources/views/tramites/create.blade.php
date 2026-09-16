@@ -34,7 +34,7 @@
 @endphp
 
 <x-layouts::app :title="__('Nuevo trámite')">
-    <div class="space-y-4">
+    <div class="space-y-3">
         <div>
             <flux:heading size="xl" class="text-[#142f44]">Nuevo trámite</flux:heading>
             <flux:text class="mt-1 text-zinc-500">Seleccione el proceso que va a registrar. Cada trámite tendrá su propia pantalla y flujo.</flux:text>
@@ -47,7 +47,7 @@
                 <a
                     href="{{ $modulo['href'] }}"
                     wire:navigate
-                    class="group flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-[#142f44]/30 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
+                    class="group flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 transition hover:border-[#142f44]/30 hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
                 >
                     <div class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
                         <flux:icon :icon="$modulo['icon']" class="size-5" />

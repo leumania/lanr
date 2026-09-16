@@ -9,20 +9,20 @@
     ];
 @endphp
 
-<div class="space-y-4">
+<div class="space-y-3">
     <div>
         <flux:heading size="xl" class="text-[#142f44]">Regularizaciones</flux:heading>
         <flux:text class="mt-1 text-zinc-500">Complete posteriormente el detalle de las compras realizadas por Logística.</flux:text>
     </div>
 
-    <flux:card class="p-4">
+    <flux:card class="p-3">
         <flux:heading size="lg" class="text-[#142f44]">Pendientes</flux:heading>
 
         @if ($pendientes->isNotEmpty())
             <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($pendientes as $regularizacion)
                     @php $datos = $card($regularizacion); @endphp
-                    <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                    <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
                         <div class="font-semibold text-[#142f44] dark:text-white">{{ $datos['tracking'] }}</div>
                         <div class="mt-0.5 text-sm text-zinc-500">N° {{ $datos['numero'] }} · Creado por {{ $datos['creador'] }}</div>
 
@@ -48,7 +48,7 @@
                 @endforeach
             </div>
         @else
-            <div class="mt-4 flex flex-col items-center gap-2 py-8 text-center">
+            <div class="mt-3 flex flex-col items-center gap-2 py-6 text-center">
                 <flux:icon.check-circle class="size-8 text-emerald-500" />
                 <flux:text class="text-zinc-500">No tienes regularizaciones de compra pendientes.</flux:text>
             </div>
@@ -56,13 +56,13 @@
     </flux:card>
 
     @if ($completadas->isNotEmpty())
-        <flux:card class="p-4">
+        <flux:card class="p-3">
             <flux:heading size="lg" class="text-[#142f44]">Completadas recientemente</flux:heading>
 
             <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($completadas as $regularizacion)
                     @php $datos = $card($regularizacion); @endphp
-                    <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                    <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
                         <div class="font-semibold text-[#142f44] dark:text-white">{{ $datos['tracking'] }}</div>
                         <div class="mt-0.5 text-sm text-zinc-500">N° {{ $datos['numero'] }} · {{ $datos['fecha'] }}</div>
 

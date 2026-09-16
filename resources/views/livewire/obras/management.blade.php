@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-5xl space-y-6 p-6">
+<div class="mx-auto max-w-5xl space-y-4 p-4">
     <div>
         <flux:heading size="xl">Obras</flux:heading>
         <flux:text class="mt-1 text-zinc-500">Registra y administra las obras disponibles para el sistema.</flux:text>
@@ -9,8 +9,8 @@
     @endif
 
     <flux:card>
-        <flux:heading size="lg" class="mb-4">Registrar nueva obra</flux:heading>
-        <form wire:submit="save" class="grid gap-4 sm:grid-cols-2">
+        <flux:heading size="lg" class="mb-3">Registrar nueva obra</flux:heading>
+        <form wire:submit="save" class="grid gap-3 sm:grid-cols-2">
             <flux:input label="Nombre" wire:model="nombre" />
             <flux:input label="Código" wire:model="codigo" placeholder="Ej: PROYECTO01" />
             <flux:textarea label="Proyecto" wire:model="proyecto" rows="2" />
@@ -21,7 +21,7 @@
     </flux:card>
 
     <flux:card>
-        <flux:heading size="lg" class="mb-4">Obras registradas</flux:heading>
+        <flux:heading size="lg" class="mb-3">Obras registradas</flux:heading>
         <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
             @foreach ($obras as $obra)
                 <div class="flex flex-wrap items-center justify-between gap-3 py-3">

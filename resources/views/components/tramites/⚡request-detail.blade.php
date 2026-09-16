@@ -989,20 +989,13 @@ new class extends Component
 };
 ?>
 <div>
-    <div class="mb-6 flex items-start justify-between">
+    <div class="mb-4 flex items-start justify-between">
         <div>
             <flux:heading size="xl">{{ $tramite->tracking }}</flux:heading>
             <flux:text class="text-zinc-500">{{ $tramite->tipo === 'REQ' ? 'Requerimiento' : 'Solicitud de Pago' }} · {{ $tramite->obra->nombre ?? 'Sin obra' }} · N° {{ $tramite->numero }} · {{ $tramite->fecha->format('Y-m-d') }}</flux:text>
         </div>
         <div class="flex flex-col items-end gap-2">
             <flux:badge size="lg" :color="$this->estadoColor($tramite->estado)">{{ $tramite->estado }}</flux:badge>
-            @if ($tramite->estado === 'Pendiente de mi revisión' && $tramite->creador_id === auth()->id())
-                <div class="flex gap-2">
-                    <flux:button size="sm" href="{{ route('tramites.edit', $tramite) }}" wire:navigate>Editar</flux:button>
-                    <flux:button size="sm" variant="primary" wire:click="creatorApprove">Confirmar revisión</flux:button>
-                    <flux:button size="sm" variant="danger" wire:click="deleteRequest">Eliminar</flux:button>
-                </div>
-            @endif
             @if (in_array($tramite->tipo, ['REQ', 'SP']))
                 <flux:button size="sm" icon="arrow-down-tray" href="{{ route('tramites.pdf', $tramite) }}">Descargar PDF</flux:button>
             @endif
@@ -1011,32 +1004,89 @@ new class extends Component
     </div>
 
     @if (session('status'))
-        <flux:callout variant="success" class="mb-4" heading="{{ session('status') }}" />
+        <flux:callout variant="success" class="mb-3" heading="{{ session('status') }}" />
     @endif
 
-    <flux:card class="mb-6">
+    @if ($tramite->estado === 'Pendiente de mi revisión' && $tramite->creador_id === auth()->id())
+        <flux:callout variant="danger" inline class="mb-4">
+            <x-slot:icon>
+                <div class="flex size-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40">
+                    <flux:icon.exclamation-triangle class="size-5 text-red-500" />
+                </div>
+            </x-slot:icon>
+
+            <div class="text-xs font-semibold tracking-wide text-red-500 uppercase">Acción pendiente</div>
+            <flux:callout.heading class="text-base font-semibold">Revise y confirme el requerimiento N° {{ $tramite->numero }}</flux:callout.heading>
+            <flux:callout.text>Este trámite aún está pendiente de su visto bueno antes de ser enviado.</flux:callout.text>
+
+            <x-slot:actions>
+                <flux:modal.trigger name="eliminar-tramite-creador">
+                    <flux:button size="sm" variant="danger">Eliminar</flux:button>
+                </flux:modal.trigger>
+                <flux:modal.trigger name="confirmar-vb-creador">
+                    <flux:button size="sm" variant="primary" class="!bg-[#142f44] hover:!bg-[#0d2032]">Dar mi V°B°</flux:button>
+                </flux:modal.trigger>
+                <flux:button size="sm" href="{{ route('tramites.edit', $tramite) }}" wire:navigate>Modificar</flux:button>
+                <flux:button size="sm" href="{{ route('tramites.pdf', $tramite) }}">Visualizar requerimiento</flux:button>
+            </x-slot:actions>
+        </flux:callout>
+
+        <flux:modal name="confirmar-vb-creador" class="max-w-md">
+            <div class="space-y-4">
+                <div>
+                    <flux:heading size="lg">Confirmar revisión</flux:heading>
+                    <flux:text class="mt-1 text-zinc-500">¿Confirma que revisó el requerimiento N° {{ $tramite->numero }} y desea enviarlo a aprobación?</flux:text>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">Cancelar</flux:button>
+                    </flux:modal.close>
+                    <flux:modal.close>
+                        <flux:button variant="primary" class="!bg-[#142f44] hover:!bg-[#0d2032]" wire:click="creatorApprove">Sí, dar mi V°B°</flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        </flux:modal>
+
+        <flux:modal name="eliminar-tramite-creador" class="max-w-md">
+            <div class="space-y-4">
+                <div>
+                    <flux:heading size="lg">Eliminar trámite</flux:heading>
+                    <flux:text class="mt-1 text-zinc-500">Esta acción eliminará permanentemente el requerimiento N° {{ $tramite->numero }} y no se puede deshacer. ¿Desea continuar?</flux:text>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">Cancelar</flux:button>
+                    </flux:modal.close>
+                    <flux:button variant="danger" wire:click="deleteRequest">Sí, eliminar</flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
+
+    <flux:card class="mb-4">
         <flux:heading size="lg" class="mb-3">Ítems solicitados</flux:heading>
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
                 <tr>
-                    <th class="py-2">Sección</th>
-                    <th class="py-2">Descripción</th>
-                    <th class="py-2">Unidad</th>
-                    <th class="py-2 text-right">Cant.</th>
-                    <th class="py-2 text-right">Stock</th>
-                    <th class="py-2 text-right">Comprar</th>
+                    <th class="py-2 pe-3">Sección</th>
+                    <th class="py-2 pe-3">Descripción</th>
+                    <th class="py-2 pe-3">Unidad</th>
+                    <th class="py-2 pe-3 text-right">Cant.</th>
+                    <th class="py-2 pe-3 text-right">Stock</th>
+                    <th class="py-2 pe-3 text-right">Comprar</th>
                     <th class="py-2">Referencias</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                 @foreach ($tramite->items as $item)
                     <tr>
-                        <td class="py-2">{{ $item->seccion }}</td>
-                        <td class="py-2">{{ $item->descripcion }}</td>
-                        <td class="py-2">{{ $item->unidad }}</td>
-                        <td class="py-2 text-right">{{ $item->cantidad }}</td>
-                        <td class="py-2 text-right">{{ $item->stock }}</td>
-                        <td class="py-2 text-right font-semibold">{{ $item->comprar }}</td>
+                        <td class="py-2 pe-3">{{ $item->seccion }}</td>
+                        <td class="py-2 pe-3">{{ $item->descripcion }}</td>
+                        <td class="py-2 pe-3">{{ $item->unidad }}</td>
+                        <td class="py-2 pe-3 text-right">{{ $item->cantidad }}</td>
+                        <td class="py-2 pe-3 text-right">{{ $item->stock }}</td>
+                        <td class="py-2 pe-3 text-right font-semibold">{{ $item->comprar }}</td>
                         <td class="py-2">
                             @foreach ($item->imagenes as $imagen)
                                 <a class="me-2 underline" href="{{ route('items.images.download', [$item, $imagen]) }}">{{ $imagen->nombre_original }}</a>
@@ -1049,7 +1099,7 @@ new class extends Component
     </flux:card>
 
     @if ($tramite->attachments->isNotEmpty())
-        <flux:card class="mb-6">
+        <flux:card class="mb-4">
             <flux:heading size="lg" class="mb-3">Documentos de respaldo</flux:heading>
             <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                 @foreach ($tramite->attachments->sortBy('orden') as $adjunto)
@@ -1069,7 +1119,7 @@ new class extends Component
         </flux:card>
     @endif
 
-    <flux:card class="mb-6">
+    <flux:card class="mb-4">
         <flux:heading size="lg" class="mb-3">Vistos buenos</flux:heading>
         <div class="flex flex-col gap-3">
             @foreach ($tramite->approvals as $approval)
@@ -1094,7 +1144,7 @@ new class extends Component
     </flux:card>
 
     @if ($tramite->tipo === 'REQ' && in_array($tramite->estado, ['Aprobado', 'Recibido por Logística', 'Cotizaciones en gestión', 'Pendiente de Administración', 'En gestión de compra', 'Enviado a obra']))
-    <flux:card class="mb-6">
+    <flux:card class="mb-4">
         <div class="mb-3 flex items-center justify-between">
             <flux:heading size="lg">Gestión de Logística</flux:heading>
 
@@ -1106,7 +1156,7 @@ new class extends Component
         </div>
 
         @if (session('error'))
-            <flux:callout variant="danger" class="mb-4" heading="{{ session('error') }}" />
+            <flux:callout variant="danger" class="mb-3" heading="{{ session('error') }}" />
         @endif
 
         @if ($tramite->estado === 'Aprobado')
@@ -1120,7 +1170,7 @@ new class extends Component
         @endif
 
         @if ($tramite->estado === 'Recibido por Logística' && auth()->user()->hasRole('Logística'))
-            <form wire:submit="registrarCompra" class="flex flex-col gap-4">
+            <form wire:submit="registrarCompra" class="flex flex-col gap-3">
                 <flux:heading size="sm">Registrar compra</flux:heading>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <flux:input type="date" label="Fecha de compra" wire:model="compra.fecha_compra" />
@@ -1143,7 +1193,7 @@ new class extends Component
                     @endforeach
                 </div>
                 <flux:checkbox wire:model="compra.pendiente_regularizacion" label="Pendiente de regularización (falta documentación definitiva)" />
-                <div><flux:label>Comprobantes de compra (opcional)</flux:label><input type="file" wire:model="archivos_compra" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full text-sm" />@error('archivos_compra.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
+                <div><flux:label>Comprobantes de compra (opcional)</flux:label><input type="file" wire:model="archivos_compra" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />@error('archivos_compra.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
                 <div>
                     <flux:button type="submit" variant="primary">Registrar compra</flux:button>
                 </div>
@@ -1159,7 +1209,7 @@ new class extends Component
                 </flux:text>
 
                 @if ($tramite->gestionLogistica->estado_pago && auth()->user()->hasRole('Logística'))
-                    <form wire:submit="registrarComprobantesDefinitivos" class="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                    <form wire:submit="registrarComprobantesDefinitivos" class="space-y-3 border-t border-zinc-200 pt-3 dark:border-zinc-700">
                         <div class="flex items-center justify-between"><flux:heading size="sm">Comprobantes definitivos</flux:heading><flux:button type="button" size="sm" icon="plus" wire:click="addComprobanteDefinitivo">Agregar comprobante</flux:button></div>
                         @foreach ($comprobantes_definitivos as $index => $comprobante)
                             <div class="grid gap-3 rounded border border-zinc-200 p-3 sm:grid-cols-2 dark:border-zinc-700">
@@ -1167,7 +1217,7 @@ new class extends Component
                                 <flux:select label="Tipo" wire:model="comprobantes_definitivos.{{ $index }}.tipo_comprobante"><flux:select.option value="Factura">Factura</flux:select.option><flux:select.option value="Boleta">Boleta</flux:select.option><flux:select.option value="Otro">Otro</flux:select.option></flux:select>
                                 <flux:input label="Número" wire:model="comprobantes_definitivos.{{ $index }}.nro_comprobante" />
                                 <flux:input type="number" step="0.01" label="Monto" wire:model="comprobantes_definitivos.{{ $index }}.monto" />
-                                <div class="sm:col-span-2"><flux:label>Evidencia</flux:label><input type="file" wire:model="comprobantes_definitivos.{{ $index }}.archivo" accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full text-sm" /></div>
+                                <div class="sm:col-span-2"><flux:label>Evidencia</flux:label><input type="file" wire:model="comprobantes_definitivos.{{ $index }}.archivo" accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" /></div>
                             </div>
                         @endforeach
                         @if ($comprobantes_definitivos)<flux:button type="submit" variant="primary">Registrar comprobantes</flux:button>@endif
@@ -1177,7 +1227,7 @@ new class extends Component
                 @if ($tramite->gestionLogistica->estado_pago)
                     <flux:badge color="green">{{ $tramite->gestionLogistica->estado_pago }}</flux:badge>
 
-                    <form wire:submit="enviarAObra" class="mt-3 flex flex-col gap-4">
+                    <form wire:submit="enviarAObra" class="mt-3 flex flex-col gap-3">
                         <flux:heading size="sm">Enviar a obra</flux:heading>
 
                         @if (session('error'))
@@ -1206,12 +1256,12 @@ new class extends Component
                                 <flux:input label="N° de guía" wire:model="envio.guia_numero" />
                                 <flux:input type="date" label="Fecha de guía" wire:model="envio.guia_fecha" />
                             </div>
-                            <div><flux:label>Archivo(s) de guía</flux:label><input type="file" wire:model="archivos_guia" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full text-sm" />@error('archivos_guia') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror @error('archivos_guia.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
+                            <div><flux:label>Archivo(s) de guía</flux:label><input type="file" wire:model="archivos_guia" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />@error('archivos_guia') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror @error('archivos_guia.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
                         @endif
 
-                        <div><flux:label>Evidencia fotográfica del envío</flux:label><input type="file" wire:model="evidencias_envio" multiple accept=".jpg,.jpeg,.png,.webp" class="mt-1 block w-full text-sm" />@error('evidencias_envio') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror @error('evidencias_envio.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
+                        <div><flux:label>Evidencia fotográfica del envío</flux:label><input type="file" wire:model="evidencias_envio" multiple accept=".jpg,.jpeg,.png,.webp" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />@error('evidencias_envio') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror @error('evidencias_envio.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
 
-                        <div><flux:label>Comprobantes de transporte (opcional)</flux:label><input type="file" wire:model="comprobantes_transporte" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full text-sm" /></div>
+                        <div><flux:label>Comprobantes de transporte (opcional)</flux:label><input type="file" wire:model="comprobantes_transporte" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" /></div>
 
                         <div>
                             <flux:button type="submit" variant="primary">Enviar a obra</flux:button>
@@ -1257,16 +1307,16 @@ new class extends Component
     @endif
 
     @if ($tramite->tipo === 'SP' && in_array($tramite->estado, ['Pendiente asignación de pago', 'Asignada a Tesorería', 'Asignada a Gerencia General', 'Pago parcial', 'Pagada pendiente conformidad GG']))
-    <flux:card class="mb-6">
+    <flux:card class="mb-4">
         <flux:heading size="lg" class="mb-3">Gestión de Pago</flux:heading>
 
         @if (session('error'))
-            <flux:callout variant="danger" class="mb-4" heading="{{ session('error') }}" />
+            <flux:callout variant="danger" class="mb-3" heading="{{ session('error') }}" />
         @endif
 
         @if ($tramite->estado === 'Pendiente asignación de pago')
             @if (auth()->user()->hasRole('Gerencia General'))
-                <form wire:submit="asignarPagoSp" class="flex flex-col gap-4">
+                <form wire:submit="asignarPagoSp" class="flex flex-col gap-3">
                     <flux:select label="¿Quién realizará el pago?" wire:model="asignado_pago">
                         <flux:select.option value="Tesorería">Tesorería</flux:select.option>
                         <flux:select.option value="Gerencia General">Gerencia General</flux:select.option>
@@ -1288,7 +1338,7 @@ new class extends Component
             @endphp
 
             @if ($puedeRegistrarPago)
-                <form wire:submit="registrarPagoSp" class="flex flex-col gap-4">
+                <form wire:submit="registrarPagoSp" class="flex flex-col gap-3">
                     <flux:text class="text-zinc-500">Monto solicitado: <span class="font-semibold text-zinc-900 dark:text-white">S/ {{ number_format($tramite->abono, 2) }}</span> · Pagado: S/ {{ number_format($tramite->gestionSp?->monto_pagado ?? 0, 2) }}</flux:text>
 
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1306,7 +1356,7 @@ new class extends Component
                         <flux:input label="N° de operación" wire:model="nro_operacion" />
                         <div class="flex flex-col gap-1">
                             <flux:label>Comprobante de pago (PDF o imagen)</flux:label>
-                            <input type="file" wire:model="comprobante_pago" class="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:text-white hover:file:bg-zinc-700 dark:text-zinc-300 dark:file:bg-white dark:file:text-zinc-900" />
+                            <input type="file" wire:model="comprobante_pago" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />
 
                             <div wire:loading wire:target="comprobante_pago" class="text-xs text-zinc-500">
                                 Subiendo archivo...
@@ -1354,11 +1404,11 @@ new class extends Component
     @endif
 
     @if ($tramite->regularizaciones->isNotEmpty())
-        <flux:card class="mb-6">
+        <flux:card class="mb-4">
             <flux:heading size="lg" class="mb-3">Regularizaciones</flux:heading>
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-3">
                 @foreach ($tramite->regularizaciones->sortByDesc('created_at') as $regularizacion)
-                    <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                    <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <div class="font-medium">{{ $regularizacion->tipo }}</div>
@@ -1368,7 +1418,7 @@ new class extends Component
                         </div>
                         <div class="mt-2 text-sm text-zinc-500">{{ $regularizacion->descripcion }}</div>
                         @if ($regularizacion->estado === 'Pendiente' && $regularizacion->responsable_id === auth()->id())
-                            <form wire:submit="regularizar({{ $regularizacion->id }})" class="mt-4 flex flex-col gap-3">
+                            <form wire:submit="regularizar({{ $regularizacion->id }})" class="mt-3 flex flex-col gap-3">
                                 <div class="flex items-center justify-between"><flux:label>Detalle de compra</flux:label><flux:button type="button" size="sm" icon="plus" wire:click="addDetalleRegularizacion">Agregar línea</flux:button></div>
                                 @foreach ($detalle_regularizacion as $index => $detalle)
                                     <div class="grid items-end gap-3 sm:grid-cols-4">
@@ -1380,7 +1430,7 @@ new class extends Component
                                 @endforeach
                                 <div class="flex-1">
                                     <flux:label>Documento de regularización</flux:label>
-                                    <input type="file" wire:model="archivo_regularizacion" accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full text-sm" />
+                                    <input type="file" wire:model="archivo_regularizacion" accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />
                                     @error('archivo_regularizacion') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror
                                 </div>
                                 <flux:button type="submit" variant="primary">Completar regularización</flux:button>
@@ -1394,9 +1444,9 @@ new class extends Component
 
     @foreach ($tramite->solicitudesTesoreria->where('estado', 'Pendiente') as $solicitud)
         @if (auth()->user()->hasRole('Tesorería'))
-            <flux:card class="mb-6">
+            <flux:card class="mb-4">
                 <flux:heading size="lg" class="mb-3">Pago pendiente de Tesorería</flux:heading>
-                <flux:text class="mb-4">Monto solicitado: S/ {{ number_format($solicitud->monto, 2) }}</flux:text>
+                <flux:text class="mb-3">Monto solicitado: S/ {{ number_format($solicitud->monto, 2) }}</flux:text>
                 <form wire:submit="pagarSolicitudTesoreria({{ $solicitud->id }})" class="grid gap-3 sm:grid-cols-2">
                     <flux:select label="Medio de pago" wire:model="medio_tesoreria">
                         <flux:select.option value="Transferencia">Transferencia</flux:select.option>
@@ -1405,7 +1455,7 @@ new class extends Component
                     </flux:select>
                     <flux:input label="Banco" wire:model="banco_tesoreria" />
                     <flux:input label="N° de operación" wire:model="operacion_tesoreria" />
-                    <div><flux:label>Comprobante</flux:label><input type="file" wire:model="comprobante_tesoreria" accept=".pdf,.jpg,.jpeg,.png,.webp" class="mt-1 block w-full text-sm" />@error('comprobante_tesoreria') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
+                    <div><flux:label>Comprobante</flux:label><input type="file" wire:model="comprobante_tesoreria" accept=".pdf,.jpg,.jpeg,.png,.webp" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />@error('comprobante_tesoreria') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror</div>
                     <div class="sm:col-span-2"><flux:button type="submit" variant="primary">Registrar pago</flux:button></div>
                 </form>
             </flux:card>
@@ -1413,7 +1463,7 @@ new class extends Component
     @endforeach
 
     @if ($tramite->archivosLogistica->isNotEmpty())
-        <flux:card class="mb-6">
+        <flux:card class="mb-4">
             <flux:heading size="lg" class="mb-3">Archivos de Logística</flux:heading>
             <div class="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
                 @foreach ($tramite->archivosLogistica->sortByDesc('created_at') as $archivo)

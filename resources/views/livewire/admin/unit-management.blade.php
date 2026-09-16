@@ -6,8 +6,8 @@
     };
 @endphp
 
-<div class="space-y-4">
-    <div class="flex items-start justify-between gap-4">
+<div class="space-y-3">
+    <div class="flex items-start justify-between gap-3">
         <div>
             <flux:heading size="xl" class="text-[#142f44]">Catálogo de unidades</flux:heading>
             <flux:text class="mt-1 text-zinc-500">Gestiona las unidades disponibles para Requerimientos y Solicitudes de pago.</flux:text>
@@ -22,7 +22,7 @@
         <flux:callout variant="success" heading="{{ session('status') }}" />
     @endif
 
-    <flux:card class="p-4">
+    <flux:card class="p-3">
         <div class="mb-3 flex items-center justify-between">
             <div>
                 <flux:heading size="lg" class="text-[#142f44]">Unidades registradas</flux:heading>
@@ -79,7 +79,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="py-6 text-center text-zinc-500">No hay unidades registradas.</td>
+                            <td colspan="4" class="py-4 text-center text-zinc-500">No hay unidades registradas.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -89,7 +89,7 @@
 
     @if ($mostrarFormulario)
         <flux:modal wire:model="mostrarFormulario" name="unidad-formulario" class="max-w-md">
-            <form wire:submit="save" class="flex flex-col gap-4">
+            <form wire:submit="save" class="flex flex-col gap-3">
                 <flux:heading size="lg" class="text-[#142f44]">{{ $editingId ? 'Editar unidad' : 'Nueva unidad' }}</flux:heading>
                 <flux:text class="text-zinc-500">
                     {{ $editingId ? 'Actualiza la abreviatura o el tipo de trámite donde estará disponible.' : 'Registra la abreviatura y define dónde estará disponible.' }}

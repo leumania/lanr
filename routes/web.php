@@ -34,6 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('tramites.edit');
     Route::view('usuarios', 'admin.users')->name('admin.users');
     Route::view('unidades', 'admin.units')->name('admin.units');
+    Route::view('monedas', 'admin.currencies')->name('admin.currencies');
     Route::view('reembolsos', 'admin.reimbursements')->name('admin.reimbursements');
     Route::view('tesoreria', 'admin.treasury')->name('admin.treasury');
     Route::view('ordenes', 'admin.orders')->name('admin.orders');

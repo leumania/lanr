@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\Tramite;
 use App\Models\UnidadCatalogo;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -46,6 +47,10 @@ class EditRequest extends Component
 
     public array $items = [];
 
+    public array $imagenesExistentes = [];
+
+    public array $imagenes = [];
+
     public array $adjuntos = [];
 
     public function mount(Tramite $tramite): void
@@ -54,7 +59,7 @@ class EditRequest extends Component
         abort_unless($tramite->creador_id === auth()->id(), 403);
         abort_unless($tramite->estado === 'Pendiente de mi revisión', 400);
 
-        $this->tramite = $tramite->load(['items', 'attachments', 'spCuentas']);
+        $this->tramite = $tramite->load(['items.imagenes', 'attachments', 'spCuentas']);
 
         [$secuencia, $anio] = $this->descomponerNumero($tramite->numero, $tramite->tipo);
         $this->numeroSecuencial = $secuencia;
@@ -85,6 +90,7 @@ class EditRequest extends Component
         ])->values()->all();
 
         $this->items = $tramite->items->map(fn (Item $item): array => [
+            'id' => $item->id,
             'seccion' => $item->seccion,
             'descripcion' => $item->descripcion,
             'concepto' => $item->descripcion,
@@ -97,6 +103,14 @@ class EditRequest extends Component
             'fecha_requerida' => $item->fecha_requerida?->format('Y-m-d') ?? '',
             'nro_despacho' => $item->nro_despacho ?? '',
         ])->values()->all();
+
+        $this->imagenesExistentes = $tramite->items->values()->map(
+            fn (Item $item) => $item->imagenes->map(fn ($img) => [
+                'id' => $img->id,
+                'url' => Storage::disk('public')->url($img->nombre_archivo),
+                'nombre' => $img->nombre_original,
+            ])->all()
+        )->all();
 
         if ($this->items === []) {
             $this->addItem();
@@ -114,6 +128,25 @@ class EditRequest extends Component
         }
 
         return [$numero, (int) now()->year];
+    }
+
+    public function getComprarProperty(): array
+    {
+        return collect($this->items)->map(
+            fn ($item) => max((float) ($item['cantidad'] ?? 0) - (float) ($item['stock'] ?? 0), 0)
+        )->all();
+    }
+
+    public function getMontosProperty(): array
+    {
+        return collect($this->items)->map(
+            fn ($item) => round((float) ($item['cantidad'] ?? 0) * (float) ($item['costo'] ?? 0), 2)
+        )->all();
+    }
+
+    public function getMonedaSimboloProperty(): string
+    {
+        return $this->tramite->moneda === 'USD' ? 'US$' : 'S/';
     }
 
     public function getUnidadesProperty()
@@ -147,15 +180,34 @@ class EditRequest extends Component
     public function addItem(): void
     {
         $this->items[] = $this->tramite->tipo === 'REQ'
-            ? ['seccion' => 'Ejecución de Obra', 'descripcion' => '', 'unidad' => '', 'cantidad' => 0, 'stock' => 0, 'justificacion' => '', 'prioridad' => 'Normal', 'fecha_requerida' => '']
-            : ['concepto' => '', 'unidad' => '', 'cantidad' => 0, 'costo' => 0, 'nro_despacho' => ''];
+            ? ['id' => null, 'seccion' => 'Ejecución de Obra', 'descripcion' => '', 'unidad' => '', 'cantidad' => 0, 'stock' => 0, 'justificacion' => '', 'prioridad' => 'Normal', 'fecha_requerida' => '']
+            : ['id' => null, 'concepto' => '', 'unidad' => '', 'cantidad' => 0, 'costo' => 0, 'nro_despacho' => ''];
+        $this->imagenesExistentes[] = [];
+        $this->imagenes[] = [];
     }
 
     public function removeItem(int $index): void
     {
         abort_if(count($this->items) <= 1, 422, 'Debe conservar al menos un ítem.');
-        unset($this->items[$index]);
+        unset($this->items[$index], $this->imagenesExistentes[$index], $this->imagenes[$index]);
         $this->items = array_values($this->items);
+        $this->imagenesExistentes = array_values($this->imagenesExistentes);
+        $this->imagenes = array_values($this->imagenes);
+    }
+
+    public function eliminarImagenExistente(int $itemIndex, int $imagenId): void
+    {
+        $imagen = \App\Models\ItemImagen::whereKey($imagenId)
+            ->whereHas('item', fn ($q) => $q->where('tramite_id', $this->tramite->id))
+            ->firstOrFail();
+
+        Storage::disk('public')->delete($imagen->nombre_archivo);
+        $imagen->delete();
+
+        $this->imagenesExistentes[$itemIndex] = collect($this->imagenesExistentes[$itemIndex] ?? [])
+            ->reject(fn ($img) => $img['id'] === $imagenId)
+            ->values()
+            ->all();
     }
 
     public function eliminarAdjunto(int $attachmentId): void
@@ -187,6 +239,9 @@ class EditRequest extends Component
                 'items.*.descripcion' => 'required|string',
                 'items.*.stock' => 'nullable|numeric|min:0',
                 'items.*.fecha_requerida' => 'nullable|date',
+                'imagenes' => 'array',
+                'imagenes.*' => 'array|max:5',
+                'imagenes.*.*' => 'file|image|mimes:jpg,jpeg,png,webp|max:5120',
             ];
         } else {
             $rules += [
@@ -220,8 +275,8 @@ class EditRequest extends Component
                 'observaciones' => $this->observaciones,
             ]);
 
-            $this->tramite->items()->delete();
             $total = 0;
+            $idsConservados = [];
 
             foreach ($this->items as $index => $item) {
                 $descripcion = $this->tramite->tipo === 'REQ' ? $item['descripcion'] : $item['concepto'];
@@ -230,7 +285,7 @@ class EditRequest extends Component
                 $monto = $costo === null ? null : round($cantidad * $costo, 2);
                 $total += $monto ?? 0;
 
-                Item::create([
+                $datosItem = [
                     'tramite_id' => $this->tramite->id,
                     'seccion' => $this->tramite->tipo === 'REQ' ? $item['seccion'] : 'Solicitud de Pago',
                     'nro' => $index + 1,
@@ -245,8 +300,31 @@ class EditRequest extends Component
                     'prioridad' => $this->tramite->tipo === 'REQ' ? ($item['prioridad'] ?? 'Normal') : 'Normal',
                     'fecha_requerida' => $this->tramite->tipo === 'REQ' && ! empty($item['fecha_requerida']) ? $item['fecha_requerida'] : null,
                     'nro_despacho' => $this->tramite->tipo === 'SP' && ($item['nro_despacho'] ?? '') !== '' ? $item['nro_despacho'] : null,
-                ]);
+                ];
+
+                $itemModel = ! empty($item['id']) ? Item::find($item['id']) : null;
+
+                if ($itemModel) {
+                    $itemModel->update($datosItem);
+                } else {
+                    $itemModel = Item::create($datosItem);
+                }
+
+                $idsConservados[] = $itemModel->id;
+
+                foreach ($this->imagenes[$index] ?? [] as $imagenNueva) {
+                    $itemModel->imagenes()->create([
+                        'nombre_original' => $imagenNueva->getClientOriginalName(),
+                        'nombre_archivo' => $imagenNueva->store('imagenes-items', 'public'),
+                    ]);
+                }
             }
+
+            $this->tramite->items()->whereNotIn('id', $idsConservados)->with('imagenes')->get()
+                ->each(function (Item $itemEliminado): void {
+                    $itemEliminado->imagenes->each(fn ($img) => Storage::disk('public')->delete($img->nombre_archivo));
+                    $itemEliminado->delete();
+                });
 
             if ($this->tramite->tipo === 'SP') {
                 $this->tramite->update(['abono' => $total]);

@@ -111,45 +111,45 @@ new class extends Component
     }
 };
 ?>
-<div class="space-y-4">
+<div class="space-y-3">
     <flux:heading size="xl">Administración de usuarios</flux:heading>
-    <flux:text class="mb-6 text-zinc-500">Gestiona los usuarios y roles del sistema.</flux:text>
+    <flux:text class="mb-4 text-zinc-500">Gestiona los usuarios y roles del sistema.</flux:text>
 
     @if (session('status'))
-        <flux:callout variant="success" class="mb-4" heading="{{ session('status') }}" />
+        <flux:callout variant="success" class="mb-3" heading="{{ session('status') }}" />
     @endif
 
     @if (session('error'))
-        <flux:callout variant="danger" class="mb-4" heading="{{ session('error') }}" />
+        <flux:callout variant="danger" class="mb-3" heading="{{ session('error') }}" />
     @endif
 
     <div class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
         <table class="w-full text-sm">
             <thead class="bg-zinc-50 text-left text-xs uppercase text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
                 <tr>
-                    <th class="px-4 py-3">Nombre</th>
-                    <th class="px-4 py-3">Usuario</th>
-                    <th class="px-4 py-3">Correo</th>
-                    <th class="px-4 py-3">Rol</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3 text-right">Acciones</th>
+                    <th class="px-3 py-3">Nombre</th>
+                    <th class="px-3 py-3">Usuario</th>
+                    <th class="px-3 py-3">Correo</th>
+                    <th class="px-3 py-3">Rol</th>
+                    <th class="px-3 py-3">Estado</th>
+                    <th class="px-3 py-3 text-right">Acciones</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
                 @foreach ($this->usuarios as $u)
                     <tr>
-                        <td class="px-4 py-3 font-medium text-zinc-900 dark:text-white">{{ $u->name }}</td>
-                        <td class="px-4 py-3">{{ $u->username }}</td>
-                        <td class="px-4 py-3">{{ $u->email }}</td>
-                        <td class="px-4 py-3">{{ $u->roles->first()?->name ?? '—' }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-3 font-medium text-zinc-900 dark:text-white">{{ $u->name }}</td>
+                        <td class="px-3 py-3">{{ $u->username }}</td>
+                        <td class="px-3 py-3">{{ $u->email }}</td>
+                        <td class="px-3 py-3">{{ $u->roles->first()?->name ?? '—' }}</td>
+                        <td class="px-3 py-3">
                             @if ($u->active)
                                 <flux:badge color="green" size="sm">Activo</flux:badge>
                             @else
                                 <flux:badge color="zinc" size="sm">Inactivo</flux:badge>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-3 text-right">
                             <div class="flex justify-end gap-2">
                                 <flux:button size="sm" icon="pencil" wire:click="editar({{ $u->id }})">Editar</flux:button>
                                 <flux:button size="sm" icon="key" wire:click="reiniciarClave({{ $u->id }})" wire:confirm="¿Reiniciar la contraseña de {{ $u->name }} a la temporal?">Reiniciar clave</flux:button>
@@ -166,7 +166,7 @@ new class extends Component
 
     @if ($editando)
         <flux:modal wire:model="editando" name="editar-usuario" class="max-w-lg">
-            <form wire:submit="guardar" class="flex flex-col gap-4">
+            <form wire:submit="guardar" class="flex flex-col gap-3">
                 <flux:heading size="lg">Editar usuario</flux:heading>
 
                 <flux:input label="Nombre completo" wire:model="name" />

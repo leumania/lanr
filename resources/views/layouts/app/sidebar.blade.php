@@ -4,8 +4,8 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-[#f5f7f9]">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-black/10 bg-gradient-to-b from-[#10283c] to-[#183950] text-white">
-            <flux:sidebar.header class="border-b border-white/10 pb-4">
+        <flux:sidebar sticky collapsible="mobile" class="w-60! border-e border-black/10 bg-gradient-to-b from-[#10283c] to-[#183950] text-white">
+            <flux:sidebar.header class="border-b border-white/10 pb-3">
                 <div class="flex items-center gap-2.5 px-1">
                     <img src="{{ asset('images/logo-lanr.jpeg') }}" alt="LANR Inversiones" class="h-9 w-9 rounded-lg object-cover" />
                     <div class="flex flex-col leading-tight">
@@ -31,7 +31,7 @@
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
-                <flux:sidebar.group :heading="__('Gestión')" class="mt-5 grid [&_[data-flux-sidebar-heading]]:text-[#8fa4b3] [&_[data-flux-sidebar-item]]:text-[#d8e2e9] [&_[data-flux-sidebar-item]]:hover:bg-white/10 [&_[data-flux-sidebar-item]]:hover:text-white [&_[data-flux-sidebar-item][data-current]]:bg-white/15 [&_[data-flux-sidebar-item][data-current]]:text-white [&_svg]:text-[#8fa4b3]">
+                <flux:sidebar.group :heading="__('Gestión')" class="mt-4 grid [&_[data-flux-sidebar-heading]]:text-[#8fa4b3] [&_[data-flux-sidebar-item]]:text-[#d8e2e9] [&_[data-flux-sidebar-item]]:hover:bg-white/10 [&_[data-flux-sidebar-item]]:hover:text-white [&_[data-flux-sidebar-item][data-current]]:bg-white/15 [&_[data-flux-sidebar-item][data-current]]:text-white [&_svg]:text-[#8fa4b3]">
                     <flux:sidebar.item icon="receipt-percent" :href="route('admin.reimbursements')" :current="request()->routeIs('admin.reimbursements')" wire:navigate>
                         {{ __('Reembolsos / Rendiciones') }}
                     </flux:sidebar.item>
@@ -67,6 +67,9 @@
                     <flux:sidebar.item icon="adjustments-horizontal" :href="route('admin.units')" :current="request()->routeIs('admin.units')" wire:navigate>
                         {{ __('Unidades') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="banknotes" :href="route('admin.currencies')" :current="request()->routeIs('admin.currencies')" wire:navigate>
+                        {{ __('Monedas') }}
+                    </flux:sidebar.item>
                     @endif
 
                     @if (auth()->user()->hasAnyRole(['Gerencia General', 'Sistemas', 'Gerencia de Obra']))
@@ -81,7 +84,7 @@
         </flux:sidebar>
 
         <!-- Top Header -->
-        <flux:header class="min-h-12! border-b border-zinc-200 bg-white px-4! lg:px-6!">
+        <flux:header class="min-h-12! border-b border-zinc-200 bg-white px-3! lg:px-4!">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <div class="hidden items-center gap-2 lg:flex">
@@ -91,11 +94,11 @@
 
             <flux:spacer />
 
-            <div class="flex items-center gap-3 sm:gap-4">
+            <div class="flex items-center gap-3 sm:gap-3">
                 <livewire:layout.notification-bell />
 
                 <div class="flex items-center gap-2 border-s border-zinc-200 ps-3 sm:ps-4">
-                    <flux:avatar :initials="auth()->user()->initials()" size="sm" />
+                    <flux:avatar :initials="auth()->user()->initials()" size="sm" circle />
                     <div class="hidden leading-tight sm:block">
                         <div class="text-sm font-semibold text-[#142f44]">{{ auth()->user()->name }}</div>
                         <div class="text-xs text-zinc-500">{{ auth()->user()->cargo }}</div>

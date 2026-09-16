@@ -5,6 +5,7 @@ use App\Models\Attachment;
 use App\Models\History;
 use App\Models\Item;
 use App\Models\Tramite;
+use App\Models\UnidadCatalogo;
 use App\Models\User;
 use App\Services\CodigoGeneratorService;
 use Illuminate\Support\Facades\DB;
@@ -64,8 +65,33 @@ new class extends Component
         $this->fecha = now()->format('Y-m-d');
         $this->anioActual = (int) now()->year;
         $this->obra_id = auth()->user()->obra_activa_id;
+        $this->numeroSecuencial = $this->siguienteNumero();
         $this->addCuenta();
         $this->addItem();
+    }
+
+    protected function siguienteNumero(): string
+    {
+        $ultimo = 0;
+
+        Tramite::where('obra_id', $this->obra_id)
+            ->where('tipo', 'SP')
+            ->pluck('numero')
+            ->each(function (string $numero) use (&$ultimo): void {
+                if (preg_match('/^(\d{4})-(\d+)$/', trim($numero), $m) && (int) $m[1] === $this->anioActual) {
+                    $ultimo = max($ultimo, (int) $m[2]);
+                }
+            });
+
+        return (string) ($ultimo + 1);
+    }
+
+    public function getUnidadesProperty()
+    {
+        return UnidadCatalogo::where('active', true)
+            ->where(fn ($q) => $q->where('uso', 'SP')->orWhere('uso', 'AMBOS'))
+            ->orderBy('abreviatura')
+            ->pluck('abreviatura');
     }
 
     public function toggleModalidad(string $nombre): void
@@ -195,7 +221,8 @@ new class extends Component
         $numero = "{$this->anioActual}-{$this->numeroSecuencial}";
 
         if (Tramite::where('obra_id', $this->obra_id)->where('tipo', 'SP')->where('numero', $numero)->exists()) {
-            $this->addError('numeroSecuencial', 'Ya existe una solicitud de pago con este número.');
+            $this->numeroSecuencial = $this->siguienteNumero();
+            $this->addError('numeroSecuencial', "El número {$numero} ya fue registrado por otra solicitud. Se asignó el siguiente disponible ({$this->anioActual}-{$this->numeroSecuencial}); intente guardar de nuevo.");
 
             return;
         }
@@ -363,7 +390,7 @@ new class extends Component
     }
 };
 ?>
-<div class="space-y-4">
+<div class="space-y-3">
     <div>
         <flux:link :href="route('tramites.create')" wire:navigate class="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#142f44] dark:hover:text-white">
             <flux:icon.arrow-left class="size-4" />
@@ -379,7 +406,7 @@ new class extends Component
     <form wire:submit="save">
         <div class="rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
             <!-- Datos de la solicitud -->
-            <div class="flex items-start gap-3 border-b border-zinc-100 p-5 dark:border-zinc-700">
+            <div class="flex items-start gap-3 border-b border-zinc-100 p-4 dark:border-zinc-700">
                 <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
                     <flux:icon.credit-card class="size-5" />
                 </div>
@@ -389,8 +416,8 @@ new class extends Component
                 </div>
             </div>
 
-            <div class="border-b border-zinc-100 p-5 dark:border-zinc-700">
-                <div class="grid gap-4 sm:grid-cols-2">
+            <div class="border-b border-zinc-100 p-4 dark:border-zinc-700">
+                <div class="grid gap-3 sm:grid-cols-2">
                     <flux:select label="Tipo de solicitud" wire:model="subtipo" required>
                         <flux:select.option value="">Seleccione...</flux:select.option>
                         @foreach (self::SUBTIPOS as $opcion)
@@ -399,21 +426,21 @@ new class extends Component
                     </flux:select>
 
                     <div>
-                        <flux:label>N° <span class="text-red-500">*</span></flux:label>
-                        <div class="mt-1 flex items-stretch overflow-hidden rounded-lg border border-zinc-200 focus-within:border-[#142f44] dark:border-zinc-700">
-                            <span class="flex items-center bg-zinc-50 px-3 text-sm font-semibold text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+                        <flux:label>N°</flux:label>
+                        <div class="mt-1 flex items-stretch overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+                            <span class="flex items-center bg-zinc-100 px-3 text-sm font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                                 {{ $anioActual }}
                             </span>
                             <span class="flex items-center px-1 text-zinc-300">-</span>
                             <input
                                 type="text"
-                                inputmode="numeric"
                                 wire:model="numeroSecuencial"
-                                required
-                                placeholder="N°"
-                                class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-zinc-700 placeholder-zinc-400 focus:ring-0 dark:text-zinc-200"
+                                readonly
+                                tabindex="-1"
+                                class="min-w-0 flex-1 cursor-not-allowed border-0 bg-transparent px-3 py-2 text-sm font-semibold text-zinc-600 focus:ring-0 dark:text-zinc-300"
                             />
                         </div>
+                        <flux:text class="mt-1 text-xs text-zinc-400">Se asigna automáticamente en base a la última solicitud registrada en esta obra.</flux:text>
                         @error('numeroSecuencial') <flux:text class="mt-1 text-sm text-red-500">{{ $message }}</flux:text> @enderror
                     </div>
 
@@ -440,7 +467,7 @@ new class extends Component
             </div>
 
             <!-- Modalidad de pago -->
-            <div class="border-b border-zinc-100 p-5 dark:border-zinc-700">
+            <div class="border-b border-zinc-100 p-4 dark:border-zinc-700">
                 <div class="mb-3 flex items-center justify-between">
                     <div class="text-sm font-semibold text-[#142f44] dark:text-white">Modalidad de pago</div>
                     <div class="text-xs text-zinc-400">Opcional · Puede marcar más de una.</div>
@@ -469,7 +496,7 @@ new class extends Component
             </div>
 
             <!-- Banco y cuenta / CCI -->
-            <div class="border-b border-zinc-100 p-5 dark:border-zinc-700">
+            <div class="border-b border-zinc-100 p-4 dark:border-zinc-700">
                 <div class="mb-3 flex items-center justify-between">
                     <div class="text-sm font-semibold text-[#142f44] dark:text-white">Banco y cuenta / CCI</div>
                     <div class="text-xs text-zinc-400">Opcional · Cada cuenta queda asociada a su banco.</div>
@@ -495,7 +522,7 @@ new class extends Component
                                 <flux:input label="Cuenta / CCI" wire:model="cuentas.{{ $index }}.cuenta_cci" placeholder="Opcional" />
                             </div>
 
-                            <flux:button class="mt-6" variant="ghost" size="sm" icon="trash" wire:click="removeCuenta({{ $index }})" />
+                            <flux:button class="mt-4" variant="ghost" size="sm" icon="trash" wire:click="removeCuenta({{ $index }})" />
                         </div>
                     @endforeach
                 </div>
@@ -506,7 +533,7 @@ new class extends Component
             </div>
 
             <!-- Detalle -->
-            <div class="border-b border-zinc-100 p-5 dark:border-zinc-700">
+            <div class="border-b border-zinc-100 p-4 dark:border-zinc-700">
                 <div class="mb-3">
                     <div class="text-sm font-semibold text-[#142f44] dark:text-white">Detalle</div>
                     <div class="text-xs text-zinc-500">Cantidad y costo unitario son obligatorios. Se permiten cantidades negativas; en el PDF se resaltarán.</div>
@@ -516,24 +543,30 @@ new class extends Component
                     <table class="w-full text-left text-sm">
                         <thead>
                             <tr class="bg-[#142f44] text-xs text-white uppercase">
-                                <th class="px-3 py-2 font-medium">N°</th>
+                                <th class="px-3 py-2 text-center font-medium">N°</th>
                                 <th class="px-3 py-2 font-medium">Concepto</th>
                                 <th class="px-3 py-2 font-medium">Unidad</th>
                                 <th class="px-3 py-2 font-medium">Cantidad</th>
                                 <th class="px-3 py-2 font-medium">Costo unit.</th>
-                                <th class="px-3 py-2 font-medium">Monto</th>
+                                <th class="px-3 py-2 text-center font-medium">Monto</th>
                                 <th class="px-3 py-2 font-medium">Detalles</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                             @foreach ($items as $index => $item)
                                 <tr x-data="{ detalles: false }">
-                                    <td class="px-3 py-2 align-top text-zinc-500">{{ $index + 1 }}</td>
+                                    <td class="px-3 py-2 text-center align-middle text-zinc-500">{{ $index + 1 }}</td>
                                     <td class="px-3 py-2 align-top"><flux:input wire:model="items.{{ $index }}.concepto" placeholder="Concepto" /></td>
-                                    <td class="px-3 py-2 align-top"><flux:input wire:model="items.{{ $index }}.unidad" placeholder="Ej: día, servicio" /></td>
+                                    <td class="px-3 py-2 align-top">
+                                        <flux:select wire:model="items.{{ $index }}.unidad" placeholder="UND.">
+                                            @foreach ($this->unidades as $unidad)
+                                                <flux:select.option value="{{ $unidad }}">{{ $unidad }}</flux:select.option>
+                                            @endforeach
+                                        </flux:select>
+                                    </td>
                                     <td class="px-3 py-2 align-top"><flux:input type="number" step="0.01" wire:model.live="items.{{ $index }}.cantidad" /></td>
                                     <td class="px-3 py-2 align-top"><flux:input type="number" step="0.01" wire:model.live="items.{{ $index }}.costo" /></td>
-                                    <td class="px-3 py-2 align-top font-semibold whitespace-nowrap text-[#142f44] dark:text-white">
+                                    <td class="px-3 py-2 text-center align-middle font-semibold whitespace-nowrap text-[#142f44] dark:text-white">
                                         {{ $this->monedaSimbolo }} {{ number_format($this->montos[$index] ?? 0, 2) }}
                                     </td>
                                     <td class="px-3 py-2 align-top">
@@ -566,14 +599,14 @@ new class extends Component
             </div>
 
             <!-- Amortización -->
-            <div class="border-b border-zinc-100 p-5 dark:border-zinc-700">
+            <div class="border-b border-zinc-100 p-4 dark:border-zinc-700">
                 <label class="flex cursor-pointer items-center gap-2 font-semibold text-[#142f44] dark:text-white">
                     <input type="checkbox" wire:model.live="usarAmortizacion" class="rounded border-zinc-300 text-[#142f44] focus:ring-[#142f44]" />
                     Registrar Solicitud de Pago (amortización)
                 </label>
 
                 @if ($usarAmortizacion)
-                    <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         <flux:input type="number" step="0.01" min="0" label="Monto de amortización" wire:model.live="amortizacion" />
                         <div>
                             <flux:label>Saldo pendiente</flux:label>
@@ -585,7 +618,7 @@ new class extends Component
             </div>
 
             <!-- Comprobantes -->
-            <div class="border-b border-zinc-100 p-5 dark:border-zinc-700">
+            <div class="border-b border-zinc-100 p-4 dark:border-zinc-700">
                 <div class="mb-3 flex items-center justify-between">
                     <div class="text-sm font-semibold text-[#142f44] dark:text-white">Comprobantes</div>
                     <div class="text-xs text-zinc-400">Opcional · Puede registrar uno o varios.</div>
@@ -606,12 +639,12 @@ new class extends Component
 
                                 <div>
                                     <flux:label>Archivo</flux:label>
-                                    <input type="file" wire:model="comprobantes.{{ $index }}.archivo" accept=".pdf,.jpg,.jpeg,.png,.webp" class="mt-1 block w-full text-sm" />
+                                    <input type="file" wire:model="comprobantes.{{ $index }}.archivo" accept=".pdf,.jpg,.jpeg,.png,.webp" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />
                                     @error("comprobantes.{$index}.archivo") <flux:text class="text-sm text-red-500">{{ $message }}</flux:text> @enderror
                                 </div>
                             </div>
 
-                            <flux:button class="mt-6" variant="ghost" size="sm" icon="trash" wire:click="removeComprobante({{ $index }})" />
+                            <flux:button class="mt-4" variant="ghost" size="sm" icon="trash" wire:click="removeComprobante({{ $index }})" />
                         </div>
                     @endforeach
                 </div>
@@ -622,23 +655,23 @@ new class extends Component
             </div>
 
             <!-- Observaciones -->
-            <div class="border-b border-zinc-100 p-5 dark:border-zinc-700">
+            <div class="border-b border-zinc-100 p-4 dark:border-zinc-700">
                 <flux:textarea label="Observaciones" wire:model="observaciones" rows="2" placeholder="Opcional" />
             </div>
 
             <!-- Otros documentos -->
-            <div class="border-b border-zinc-100 p-5 dark:border-zinc-700">
+            <div class="border-b border-zinc-100 p-4 dark:border-zinc-700">
                 <div class="mb-3 flex items-center justify-between">
                     <div class="text-sm font-semibold text-[#142f44] dark:text-white">Otros documentos de sustento</div>
                     <div class="text-xs text-zinc-400">Opcional · Se anexarán después de los comprobantes en el PDF.</div>
                 </div>
 
-                <input type="file" wire:model="otrosDocumentos" multiple accept=".pdf" class="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:text-white dark:text-zinc-300 dark:file:bg-white dark:file:text-zinc-900" />
+                <input type="file" wire:model="otrosDocumentos" multiple accept=".pdf" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />
                 @error('otrosDocumentos.*') <flux:text class="mt-1 text-sm text-red-500">{{ $message }}</flux:text> @enderror
             </div>
 
             <!-- Aviso -->
-            <div class="p-5">
+            <div class="p-4">
                 <div class="flex items-start gap-2 rounded-lg bg-blue-50 p-3 text-sm dark:bg-blue-950/30">
                     <flux:icon.information-circle class="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />
                     <div>
@@ -649,7 +682,7 @@ new class extends Component
             </div>
         </div>
 
-        <div class="mt-4 flex justify-end gap-3">
+        <div class="mt-3 flex justify-end gap-3">
             <flux:button variant="ghost" :href="route('tramites.create')" wire:navigate>Cancelar</flux:button>
             <flux:button type="submit" variant="primary" icon="arrow-right" class="!bg-[#142f44] hover:!bg-[#0d2032]">
                 Registrar y revisar

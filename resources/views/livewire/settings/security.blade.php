@@ -4,7 +4,7 @@
     <flux:heading level="2" class="sr-only">{{ __('Security settings') }}</flux:heading>
 
     <x-settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
-        <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-6">
+        <form method="POST" wire:submit="updatePassword" class="mt-4 space-y-4">
             <flux:input
                 wire:model="current_password"
                 :label="__('Current password')"
@@ -32,7 +32,7 @@
                 viewable
             />
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
                 <flux:button variant="primary" type="submit" data-test="update-password-button">{{ __('Save') }}</flux:button>
             </div>
         </form>

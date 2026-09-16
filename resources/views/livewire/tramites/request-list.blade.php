@@ -8,43 +8,43 @@
     ];
 @endphp
 
-<div class="space-y-4">
+<div class="space-y-3">
     <div>
         <flux:heading size="xl" class="text-[#142f44]">Trámites</flux:heading>
         <flux:text class="mt-1 text-zinc-500">Consulta y seguimiento de requerimientos y solicitudes de pago.</flux:text>
     </div>
 
-    <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+    <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
         @foreach ($tabs as $tab)
             @php $activo = $flujo === $tab['key']; @endphp
             <button
                 type="button"
                 wire:click="setFlujo('{{ $tab['key'] }}')"
                 @class([
-                    'relative flex items-center gap-2.5 rounded-xl border p-3 text-left transition',
+                    'relative flex min-h-[68px] items-center gap-2.5 rounded-lg border p-2.5 text-left transition',
                     'border-[#142f44] bg-[#142f44] text-white' => $activo,
                     'border-zinc-200 bg-white hover:border-[#142f44]/30 dark:border-zinc-700 dark:bg-zinc-800' => ! $activo,
                 ])
             >
                 <div @class([
-                    'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                    'flex size-8 shrink-0 items-center justify-center rounded-lg',
                     'bg-white/15 text-white' => $activo,
                     'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400' => ! $activo,
                 ])>
-                    <flux:icon :icon="$tab['icon']" class="size-4" />
+                    <flux:icon :icon="$tab['icon']" class="size-3.5" />
                 </div>
 
-                <div class="min-w-0">
-                    <div @class(['font-semibold', 'text-white' => $activo, 'text-[#142f44] dark:text-white' => ! $activo])>
+                <div class="min-w-0 leading-tight">
+                    <div @class(['truncate text-xs font-semibold', 'text-white' => $activo, 'text-[#142f44] dark:text-white' => ! $activo])>
                         {{ $tab['title'] }}
                     </div>
-                    <div @class(['text-xs', 'text-white/70' => $activo, 'text-zinc-500' => ! $activo])>
+                    <div @class(['truncate text-[10px]', 'text-white/70' => $activo, 'text-zinc-500' => ! $activo])>
                         {{ $tab['subtitle'] }}
                     </div>
                 </div>
 
                 <span @class([
-                    'ms-auto flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                    'absolute top-2 right-2 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
                     'bg-white/15 text-white' => $activo,
                     'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' => ! $activo,
                 ])>
@@ -54,7 +54,7 @@
         @endforeach
     </div>
 
-    <flux:card class="p-4">
+    <flux:card class="p-3">
         <div class="grid gap-3 sm:grid-cols-[minmax(0,220px)_1fr]">
             <flux:select label="Tipo de trámite" wire:model.live="tipo">
                 <flux:select.option value="">Todos</flux:select.option>
@@ -83,7 +83,7 @@
         </div>
     </flux:card>
 
-    <flux:card class="p-4">
+    <flux:card class="p-3">
         <div>
             <flux:heading size="lg" class="text-[#142f44]">Listado de trámites</flux:heading>
             <flux:text class="mt-1 text-zinc-500">{{ $nota }}</flux:text>
@@ -130,7 +130,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-6 text-center text-zinc-500">No hay trámites para mostrar.</td>
+                            <td colspan="6" class="py-4 text-center text-zinc-500">No hay trámites para mostrar.</td>
                         </tr>
                     @endforelse
                 </tbody>
