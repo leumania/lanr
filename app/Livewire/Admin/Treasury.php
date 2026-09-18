@@ -32,6 +32,10 @@ class Treasury extends Component
 
     public $evidenciaReembolso;
 
+    public ?int $detalleSolicitudId = null;
+
+    public bool $mostrarDetalle = false;
+
     public function mount(): void
     {
         abort_unless(auth()->user()->hasAnyRole(['Tesorería', 'Sistemas']), 403);
@@ -139,6 +143,23 @@ class Treasury extends Component
         session()->flash('status', 'Reembolso atendido con evidencia.');
     }
 
+    public function verDetalle(int $solicitudId): void
+    {
+        $obraId = auth()->user()->obra_activa_id;
+
+        $solicitud = SolicitudTesoreria::whereHas('tramite', fn ($query) => $query->where('obra_id', $obraId))
+            ->findOrFail($solicitudId);
+
+        $this->detalleSolicitudId = $solicitud->id;
+        $this->mostrarDetalle = true;
+    }
+
+    public function cerrarDetalle(): void
+    {
+        $this->mostrarDetalle = false;
+        $this->detalleSolicitudId = null;
+    }
+
     protected function resetPaymentForm(): void
     {
         $this->reset(['medioOtro', 'banco', 'operacion', 'monto']);
@@ -159,12 +180,35 @@ class Treasury extends Component
 
         $reembolsos = Reembolso::where('obra_id', $obraId)->where('estado', 'Autorizado')->with('solicitante')->latest()->get();
 
+        $spTramites = Tramite::where('obra_id', $obraId)
+            ->where('tipo', 'SP')
+            ->whereIn('estado', ['Asignada a Tesorería', 'Pago parcial'])
+            ->whereHas('gestionSp', fn ($query) => $query->where('asignado_pago', 'Tesorería'))
+            ->with(['creador', 'gestionSp'])
+            ->orderByRaw("CASE WHEN estado = 'Asignada a Tesorería' THEN 0 ELSE 1 END")
+            ->latest('id')
+            ->get();
+
+        $solicitudDetalle = $this->detalleSolicitudId
+            ? SolicitudTesoreria::whereHas('tramite', fn ($query) => $query->where('obra_id', $obraId))
+                ->with(['tramite.items', 'pagos', 'solicitante'])
+                ->find($this->detalleSolicitudId)
+            : null;
+
+        $historialDetalle = $solicitudDetalle
+            ? History::where('tramite_id', $solicitudDetalle->tramite_id)->with('usuario')->latest()->get()
+            : collect();
+
         return view('livewire.admin.treasury', [
             'solicitudes' => $solicitudes,
             'reembolsos' => $reembolsos,
+            'spTramites' => $spTramites,
             'pendientesCount' => $solicitudes->where('estado', 'Pendiente')->count(),
             'pendientesMonto' => $solicitudes->where('estado', 'Pendiente')->sum('monto'),
             'reembolsosMonto' => $reembolsos->sum('monto'),
+            'spPendientesCount' => $spTramites->count(),
+            'solicitudDetalle' => $solicitudDetalle,
+            'historialDetalle' => $historialDetalle,
         ]);
     }
 }

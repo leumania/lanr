@@ -184,5 +184,29 @@
                 @endforelse
             </div>
         </flux:card>
+
+        <flux:card class="p-3">
+            <div class="flex items-center justify-between">
+                <flux:heading size="lg" class="text-[#142f44]">Reembolsos pendientes de Tesorería</flux:heading>
+                @if ($reembolsosPendientes->isNotEmpty())
+                    <flux:text class="text-zinc-500">
+                        {{ $reembolsosPendientes->count() }} {{ $reembolsosPendientes->count() === 1 ? 'pendiente' : 'pendientes' }}
+                    </flux:text>
+                @endif
+            </div>
+            <div class="mt-3 flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+                @forelse ($reembolsosPendientes as $reembolso)
+                    <a href="{{ route('admin.treasury') }}" wire:navigate class="flex items-center justify-between py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                        <div>
+                            <div class="font-semibold text-[#142f44] dark:text-white">{{ $reembolso->numero }}</div>
+                            <div class="text-sm text-zinc-500">{{ $reembolso->solicitante?->name }} · {{ $reembolso->moneda }} {{ number_format($reembolso->monto, 2) }}</div>
+                        </div>
+                        <flux:badge size="sm" color="emerald">Atender</flux:badge>
+                    </a>
+                @empty
+                    <flux:text class="py-3 text-zinc-500">No hay reembolsos pendientes de atención.</flux:text>
+                @endforelse
+            </div>
+        </flux:card>
     @endif
 </div>

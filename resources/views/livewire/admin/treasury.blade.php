@@ -7,7 +7,7 @@
     @if (session('status'))<flux:callout variant="success" heading="{{ session('status') }}" />@endif
     @if ($errors->any())<flux:callout variant="danger" heading="{{ $errors->first() }}" />@endif
 
-    <div class="grid gap-3 sm:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <flux:card class="flex items-center justify-between p-3">
             <div>
                 <flux:text class="text-zinc-500">Pagos pendientes</flux:text>
@@ -25,6 +25,16 @@
             </div>
             <div class="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
                 <flux:icon.banknotes class="size-5" />
+            </div>
+        </flux:card>
+
+        <flux:card class="flex items-center justify-between p-3">
+            <div>
+                <flux:text class="text-zinc-500">SP asignadas a Tesorería</flux:text>
+                <flux:heading size="xl" class="mt-1 text-[#142f44]">{{ $spPendientesCount }}</flux:heading>
+            </div>
+            <div class="flex size-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+                <flux:icon.document-currency-dollar class="size-5" />
             </div>
         </flux:card>
 
@@ -66,6 +76,9 @@
                                 <flux:badge size="sm" :color="match ($solicitud->estado) { 'Pendiente' => 'amber', 'Informativo' => 'blue', default => 'green' }">{{ $solicitud->estado }}</flux:badge>
                             </td>
                             <td class="py-2.5">
+                                <flux:button size="sm" variant="ghost" icon="eye" wire:click="verDetalle({{ $solicitud->id }})" class="mb-2">
+                                    Ver detalle
+                                </flux:button>
                                 @if ($solicitud->estado === 'Pendiente')
                                     <form wire:submit="pagarSolicitud({{ $solicitud->id }})" class="grid gap-2 sm:grid-cols-2">
                                         <flux:select label="Medio" wire:model.live="medio">
@@ -115,6 +128,52 @@
     </flux:card>
 
     <flux:card class="p-3">
+        <flux:heading size="lg" class="text-[#142f44]">Solicitudes de Pago (SP)</flux:heading>
+        <flux:text class="mt-1 text-zinc-500">Solicitudes de Pago asignadas a Tesorería para su atención.</flux:text>
+        <div class="mt-3 overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-zinc-100 text-xs text-zinc-500 uppercase dark:border-zinc-800">
+                        <th class="pb-2 pe-3 font-medium">Trámite</th>
+                        <th class="pb-2 pe-3 font-medium">Beneficiario</th>
+                        <th class="pb-2 pe-3 font-medium">Fecha</th>
+                        <th class="pb-2 pe-3 font-medium">Monto</th>
+                        <th class="pb-2 pe-3 font-medium">Estado</th>
+                        <th class="pb-2 font-medium">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    @forelse ($spTramites as $sp)
+                        <tr>
+                            <td class="py-2.5 pe-3">
+                                <a class="font-semibold text-[#142f44] underline dark:text-white" href="{{ route('tramites.show', $sp) }}" wire:navigate>
+                                    {{ $sp->tracking }}
+                                </a>
+                                <div class="text-xs text-zinc-500">{{ $sp->creador?->name }}</div>
+                            </td>
+                            <td class="py-2.5 pe-3 text-zinc-600 dark:text-zinc-300">{{ $sp->beneficiario }}</td>
+                            <td class="py-2.5 pe-3 text-zinc-600 dark:text-zinc-300">{{ $sp->fecha?->format('d/m/Y') }}</td>
+                            <td class="py-2.5 pe-3 font-semibold text-[#142f44] dark:text-white">
+                                {{ $sp->moneda === 'USD' ? 'US$' : 'S/' }} {{ number_format($sp->abono, 2) }}
+                            </td>
+                            <td class="py-2.5 pe-3">
+                                <flux:badge size="sm" :color="$sp->estado === 'Asignada a Tesorería' ? 'amber' : 'blue'">{{ $sp->estado }}</flux:badge>
+                            </td>
+                            <td class="py-2.5">
+                                <flux:button size="sm" variant="primary" icon="banknotes" :href="route('tramites.show', $sp)" class="!bg-[#142f44] hover:!bg-[#0d2032]" wire:navigate>
+                                    Registrar pago
+                                </flux:button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="py-4 text-center text-zinc-500">No hay Solicitudes de Pago asignadas a Tesorería.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </flux:card>
+
+    <flux:card class="p-3">
         <flux:heading size="lg" class="text-[#142f44]">Reembolsos autorizados</flux:heading>
         <div class="mt-3 overflow-x-auto">
             <table class="w-full text-left text-sm">
@@ -146,4 +205,108 @@
             </table>
         </div>
     </flux:card>
+
+    @if ($mostrarDetalle)
+        <flux:modal wire:model="mostrarDetalle" name="detalle-solicitud" class="max-w-2xl">
+            @if ($solicitudDetalle)
+                <div class="space-y-4">
+                    <div>
+                        <flux:heading size="lg" class="text-[#142f44]">
+                            Detalle de la solicitud · {{ $solicitudDetalle->tramite->tracking }}
+                        </flux:heading>
+                        <flux:text class="mt-1 text-zinc-500">
+                            {{ $solicitudDetalle->origen }} · Solicitado por {{ $solicitudDetalle->solicitante?->name }}
+                        </flux:text>
+                    </div>
+
+                    <div>
+                        <flux:heading size="sm" class="text-[#142f44]">Ítems del trámite</flux:heading>
+                        <div class="mt-2 overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="border-b border-zinc-100 text-xs text-zinc-500 uppercase dark:border-zinc-800">
+                                        <th class="pb-2 pe-3 font-medium">Descripción</th>
+                                        <th class="pb-2 pe-3 font-medium">Unidad</th>
+                                        <th class="pb-2 pe-3 font-medium">Cantidad</th>
+                                        <th class="pb-2 font-medium">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                    @forelse ($solicitudDetalle->tramite->items as $item)
+                                        <tr>
+                                            <td class="py-2 pe-3">{{ $item->descripcion }}</td>
+                                            <td class="py-2 pe-3 text-zinc-600 dark:text-zinc-300">{{ $item->unidad }}</td>
+                                            <td class="py-2 pe-3 text-zinc-600 dark:text-zinc-300">{{ $item->cantidad }}</td>
+                                            <td class="py-2">{{ $item->monto ? 'S/ '.number_format($item->monto, 2) : '—' }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="4" class="py-3 text-center text-zinc-500">Este trámite no tiene ítems registrados.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <flux:heading size="sm" class="text-[#142f44]">Historial de pagos parciales</flux:heading>
+                        <div class="mt-2 overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="border-b border-zinc-100 text-xs text-zinc-500 uppercase dark:border-zinc-800">
+                                        <th class="pb-2 pe-3 font-medium">Fecha</th>
+                                        <th class="pb-2 pe-3 font-medium">Medio</th>
+                                        <th class="pb-2 pe-3 font-medium">Banco / operación</th>
+                                        <th class="pb-2 pe-3 font-medium">Monto</th>
+                                        <th class="pb-2 font-medium">Comprobante</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                    @forelse ($solicitudDetalle->pagos as $pago)
+                                        <tr>
+                                            <td class="py-2 pe-3">{{ $pago->created_at?->format('d/m/Y H:i') }}</td>
+                                            <td class="py-2 pe-3 text-zinc-600 dark:text-zinc-300">{{ $pago->medio_pago }}</td>
+                                            <td class="py-2 pe-3 text-zinc-600 dark:text-zinc-300">{{ $pago->banco }} {{ $pago->nro_operacion ? '· '.$pago->nro_operacion : '' }}</td>
+                                            <td class="py-2 pe-3 font-semibold text-[#142f44] dark:text-white">S/ {{ number_format($pago->monto, 2) }}</td>
+                                            <td class="py-2">
+                                                @if ($pago->nombre_archivo)
+                                                    <a href="{{ route('tesoreria.pagos.download', $pago) }}" class="text-xs text-blue-600 underline hover:text-blue-800">
+                                                        {{ $pago->nombre_original ?? 'Ver' }}
+                                                    </a>
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="5" class="py-3 text-center text-zinc-500">Aún no se registran pagos para esta solicitud.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    @if ($historialDetalle->isNotEmpty())
+                        <div>
+                            <flux:heading size="sm" class="text-[#142f44]">Historial del trámite</flux:heading>
+                            <ul class="mt-2 space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
+                                @foreach ($historialDetalle as $evento)
+                                    <li>
+                                        <span class="text-zinc-400">{{ $evento->created_at?->format('d/m/Y H:i') }}</span>
+                                        — {{ $evento->accion }}
+                                        @if ($evento->usuario)
+                                            <span class="text-zinc-400">({{ $evento->usuario->name }})</span>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <div class="flex justify-end">
+                        <flux:button variant="ghost" wire:click="cerrarDetalle">Cerrar</flux:button>
+                    </div>
+                </div>
+            @endif
+        </flux:modal>
+    @endif
 </div>
