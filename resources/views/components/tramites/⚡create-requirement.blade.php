@@ -8,6 +8,7 @@ use App\Models\Tramite;
 use App\Models\UnidadCatalogo;
 use App\Models\User;
 use App\Services\CodigoGeneratorService;
+use App\Support\TramiteRoles;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -34,7 +35,7 @@ new class extends Component
 
     public function mount(): void
     {
-        abort_unless(auth()->user()->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento', 'Administración', 'Logística', 'Tesorería', 'Sistemas']), 403);
+        abort_unless(auth()->user()->hasAnyRole(TramiteRoles::requirementCreatorRoles()), 403);
         $this->fecha = now()->format('Y-m-d');
         $this->anioActual = (int) now()->year;
         $this->obra_id = auth()->user()->obra_activa_id;
@@ -198,8 +199,8 @@ new class extends Component
         abort_unless(auth()->user()->hasAccessToObra($this->obra_id), 403);
 
         $user = auth()->user();
-        $esRolDeOficina = $user->hasAnyRole(['Administración', 'Logística', 'Tesorería', 'Sistemas'])
-            && ! $user->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento']);
+        $esRolDeOficina = $user->hasAnyRole(TramiteRoles::OFFICE_REQUIREMENT_ROLES)
+            && ! $user->hasAnyRole(TramiteRoles::TRAMITE_CREATOR_ROLES);
 
         if ($esRolDeOficina) {
             $seccionesUsadas = collect($this->items)
@@ -222,8 +223,7 @@ new class extends Component
             ->exists();
 
         if ($duplicado) {
-            $this->numeroSecuencial = $this->siguienteNumero();
-            $this->addError('numeroSecuencial', "El número {$numero} ya fue registrado por otro trámite. Se asignó el siguiente disponible ({$this->numeroSecuencial}-{$this->anioActual}); intente guardar de nuevo.");
+            $this->addError('numeroSecuencial', "El requerimiento N.° {$numero} ya existe. Modifique el correlativo e inténtelo nuevamente.");
 
             return;
         }
@@ -378,18 +378,18 @@ new class extends Component
                         <flux:label>N° de requerimiento</flux:label>
                         <div class="mt-1 flex items-stretch overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
                             <input
-                                type="text"
+                                type="number"
+                                min="1"
+                                step="1"
                                 wire:model="numeroSecuencial"
-                                readonly
-                                tabindex="-1"
-                                class="min-w-0 flex-1 cursor-not-allowed border-0 bg-transparent px-3 py-2 text-sm font-semibold text-zinc-600 focus:ring-0 dark:text-zinc-300"
+                                class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm font-semibold text-zinc-600 focus:ring-0 dark:text-zinc-300"
                             />
                             <span class="flex items-center px-1 text-zinc-300">-</span>
                             <span class="flex items-center bg-zinc-100 px-3 text-sm font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                                 {{ $anioActual }}
                             </span>
                         </div>
-                        <flux:text class="mt-1 text-xs text-zinc-400">Se asigna automáticamente en base al último requerimiento registrado en esta obra.</flux:text>
+                        <flux:text class="mt-1 text-xs text-zinc-400">Se sugiere automáticamente en base al último requerimiento registrado en esta obra. Puede modificarlo si ya existe.</flux:text>
                         @error('numeroSecuencial') <flux:text class="mt-1 text-sm text-red-500">{{ $message }}</flux:text> @enderror
                     </div>
 

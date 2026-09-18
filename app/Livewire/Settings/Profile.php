@@ -19,7 +19,9 @@ class Profile extends Component
     public string $name = '';
 
     public string $email = '';
+
     public string $phone = '';
+
     public $photo;
 
     /**
@@ -40,9 +42,11 @@ class Profile extends Component
         $user = Auth::user();
 
         $validated = $this->validate(array_merge($this->profileRules($user->id), [
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|string|max:30|regex:/^\d{7,15}$/',
             'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-        ]));
+        ]), [
+            'phone.regex' => 'El teléfono debe contener solo números, entre 7 y 15 dígitos.',
+        ]);
 
         $user->fill(['name' => $validated['name'], 'email' => $validated['email'], 'phone' => $validated['phone'] ?? null]);
 

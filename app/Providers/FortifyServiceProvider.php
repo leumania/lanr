@@ -41,7 +41,17 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
         Fortify::authenticateUsing(function (Request $request) {
-            $user = User::where(Fortify::username(), $request->input(Fortify::username()))->first();
+            $usernameField = Fortify::username();
+            $usernameInput = (string) $request->input($usernameField);
+
+            $user = User::where($usernameField, $usernameInput)->first();
+
+            // Comparación exacta (sensible a mayúsculas/minúsculas) para igualar el
+            // comportamiento de V11: MySQL usa collation case-insensitive por defecto,
+            // así que se valida explícitamente en PHP sin depender de la collation de la columna.
+            if ($user && ! hash_equals($user->{$usernameField}, $usernameInput)) {
+                $user = null;
+            }
 
             if (! $user || ! Hash::check($request->input('password'), $user->password)) {
                 return null;

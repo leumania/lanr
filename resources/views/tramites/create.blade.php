@@ -7,14 +7,14 @@
             'icon' => 'archive-box',
             'titulo' => 'Requerimiento de materiales',
             'descripcion' => 'Materiales de obra, seguridad y útiles de oficina según su rol.',
-            'visible' => $user->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento', 'Administración', 'Logística', 'Tesorería', 'Sistemas']),
+            'visible' => $user->hasAnyRole(\App\Support\TramiteRoles::requirementCreatorRoles()),
         ],
         [
             'href' => route('tramites.create-sp'),
             'icon' => 'credit-card',
             'titulo' => 'Solicitud de pago',
             'descripcion' => 'Registra una solicitud y envíala a la revisión correspondiente.',
-            'visible' => $user->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento', 'Contabilidad', 'Administración']),
+            'visible' => $user->hasAnyRole(\App\Support\TramiteRoles::PAYMENT_REQUEST_CREATOR_ROLES),
         ],
         [
             'href' => route('admin.orders'),

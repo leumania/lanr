@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use App\Concerns\PasswordValidationRules;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Livewire\Attributes\Title;
@@ -36,6 +37,12 @@ class Security extends Component
                 'current_password' => $this->currentPasswordRules(),
                 'password' => $this->passwordRules(),
             ]);
+
+            if (Hash::check($validated['password'], Auth::user()->password)) {
+                throw ValidationException::withMessages([
+                    'password' => 'La nueva contraseña debe ser diferente a la contraseña actual.',
+                ]);
+            }
         } catch (ValidationException $e) {
             $this->reset('current_password', 'password', 'password_confirmation');
 

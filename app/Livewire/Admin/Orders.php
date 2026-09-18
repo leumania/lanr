@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\History;
 use App\Models\MonedaCatalogo;
 use App\Models\Orden;
 use App\Models\UnidadCatalogo;
@@ -15,14 +14,23 @@ class Orders extends Component
     use WithFileUploads;
 
     public string $tipoOrden = 'Orden de compra';
+
     public string $numero = '';
+
     public string $fecha = '';
+
     public string $proveedor = '';
+
     public string $documentoProveedor = '';
+
     public string $descripcion = '';
+
     public string $total = '';
+
     public string $moneda = 'PEN';
+
     public array $items = [];
+
     public array $archivos = [];
 
     public function mount(): void
@@ -103,9 +111,7 @@ class Orders extends Component
             ->exists();
 
         if ($duplicado) {
-            $numeroAnterior = $this->numero;
-            $this->numero = $this->siguienteNumero();
-            $this->addError('numero', "El número {$numeroAnterior} ya fue registrado por otra orden. Se asignó el siguiente disponible ({$this->numero}); intente guardar de nuevo.");
+            $this->addError('numero', "El número {$this->numero} ya fue registrado por otra orden. Modifique el número e inténtelo nuevamente.");
 
             return;
         }
@@ -133,7 +139,9 @@ class Orders extends Component
         $order = Orden::where('obra_id', auth()->user()->obra_activa_id)->findOrFail($id);
         $user = auth()->user();
         abort_unless($order->estado === 'Pendiente de aprobación', 400);
-        $field = match (true) { $user->hasRole('Gerencia de Obra') => 'vobo_gerencia_obra', $user->hasRole('Administración') => 'vobo_administracion', $user->hasRole('Gerencia General') => 'vobo_gerencia_general', default => null };
+        $field = match (true) {
+            $user->hasRole('Gerencia de Obra') => 'vobo_gerencia_obra', $user->hasRole('Administración') => 'vobo_administracion', $user->hasRole('Gerencia General') => 'vobo_gerencia_general', default => null
+        };
         abort_unless($field, 403);
         abort_unless(! ($field === 'vobo_administracion' && ! $order->vobo_gerencia_obra), 400);
         abort_unless(! ($field === 'vobo_gerencia_general' && (! $order->vobo_gerencia_obra || ! $order->vobo_administracion)), 400);

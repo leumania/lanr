@@ -81,9 +81,6 @@ class User extends Authenticatable
     {
         return Obra::query()
             ->where('activa', true)
-            ->where(function ($query) {
-                $query->whereKey($this->obra_activa_id)
-                    ->orWhereHas('usuariosAsignados', fn ($assigned) => $assigned->whereKey($this->id));
-            });
+            ->whereHas('usuariosAsignados', fn ($assigned) => $assigned->whereKey($this->id));
     }
 }
