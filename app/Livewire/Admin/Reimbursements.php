@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\Notificacion;
 use App\Models\Reembolso;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -58,6 +60,16 @@ class Reimbursements extends Component
             foreach ($this->archivos as $archivo) {
                 $reembolso->adjuntos()->create(['nombre_original' => $archivo->getClientOriginalName(), 'nombre_archivo' => $archivo->store('reembolsos', 'public')]);
             }
+
+            foreach (User::role('Administración')->activeAssignedToObra($obraId)->get() as $destinatario) {
+                Notificacion::create([
+                    'usuario_id' => $destinatario->id,
+                    'tramite_id' => null,
+                    'titulo' => 'Reembolso pendiente de autorización',
+                    'mensaje' => "El {$reembolso->tipo} {$reembolso->numero} por {$reembolso->moneda} ".number_format((float) $reembolso->monto, 2).' está pendiente de autorización.',
+                    'tipo' => 'accion',
+                ]);
+            }
         });
 
         $this->reset(['numero', 'concepto', 'monto', 'observaciones', 'archivos']);
@@ -71,6 +83,16 @@ class Reimbursements extends Component
         $reembolso = $this->accessible()->findOrFail($id);
         abort_unless($reembolso->estado === 'Pendiente', 400);
         $reembolso->update(['estado' => 'Autorizado', 'autorizado_por' => auth()->id(), 'fecha_autorizacion' => now()]);
+
+        foreach (User::role('Tesorería')->activeAssignedToObra($reembolso->obra_id)->get() as $destinatario) {
+            Notificacion::create([
+                'usuario_id' => $destinatario->id,
+                'tramite_id' => null,
+                'titulo' => 'Reembolso pendiente de atención',
+                'mensaje' => "El {$reembolso->tipo} {$reembolso->numero} fue autorizado por Administración y está pendiente de atención.",
+                'tipo' => 'accion',
+            ]);
+        }
     }
 
     public function attend(int $id): void

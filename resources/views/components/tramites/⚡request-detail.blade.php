@@ -1072,6 +1072,13 @@ new class extends Component
                 'usuario_id' => $user->id,
                 'accion' => $accion,
             ]);
+
+            $this->notificarRoles(
+                [$this->asignado_pago],
+                'Solicitud asignada para pago',
+                "La solicitud {$this->tramite->tracking} fue asignada a {$this->asignado_pago} para su pago.",
+                'accion'
+            );
         });
 
         session()->flash('status', 'Responsable del pago asignado correctamente.');
