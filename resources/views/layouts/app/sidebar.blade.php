@@ -3,7 +3,7 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-[#f5f7f9]">
+    <body class="min-h-screen bg-[#f5f7f9] dark:bg-zinc-900">
         <flux:sidebar sticky collapsible="mobile" class="w-60! border-e border-black/10 bg-gradient-to-b from-[#10283c] to-[#183950] text-white">
             <flux:sidebar.header class="border-b border-white/10 pb-3">
                 <div class="flex items-center gap-2.5 px-1">
@@ -84,7 +84,7 @@
         </flux:sidebar>
 
         <!-- Top Header -->
-        <flux:header class="min-h-12! border-b border-zinc-200 bg-white px-3! lg:px-4!">
+        <flux:header class="min-h-12! border-b border-zinc-200 bg-white px-3! lg:px-4! dark:border-zinc-800 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <div class="hidden items-center gap-2 lg:flex">
@@ -95,13 +95,32 @@
             <flux:spacer />
 
             <div class="flex items-center gap-3 sm:gap-3">
+                <div x-data>
+                    <flux:button
+                        x-show="!$flux.dark"
+                        x-cloak
+                        @click="$flux.appearance = 'dark'"
+                        variant="ghost"
+                        icon="moon"
+                        title="{{ __('Activar tema oscuro') }}"
+                    />
+                    <flux:button
+                        x-show="$flux.dark"
+                        x-cloak
+                        @click="$flux.appearance = 'light'"
+                        variant="ghost"
+                        icon="sun"
+                        title="{{ __('Activar tema claro') }}"
+                    />
+                </div>
+
                 <livewire:layout.notification-bell />
 
-                <div class="flex items-center gap-2 border-s border-zinc-200 ps-3 sm:ps-4">
+                <div class="flex items-center gap-2 border-s border-zinc-200 ps-3 sm:ps-4 dark:border-zinc-800">
                     <flux:avatar :initials="auth()->user()->initials()" size="sm" circle />
                     <div class="hidden leading-tight sm:block">
-                        <div class="text-sm font-semibold text-[#142f44]">{{ auth()->user()->name }}</div>
-                        <div class="text-xs text-zinc-500">{{ auth()->user()->cargo }}</div>
+                        <div class="text-sm font-semibold text-[#142f44] dark:text-white">{{ auth()->user()->name }}</div>
+                        <div class="text-xs text-zinc-500 dark:text-zinc-400">{{ auth()->user()->cargo }}</div>
                     </div>
                 </div>
 
@@ -121,7 +140,7 @@
 
         {{ $slot }}
 
-        <footer class="flex h-[38px] items-center justify-center border-t border-[#dde5ea] bg-white text-[10px] text-[#7d8b95] [grid-column:1/-1]">
+        <footer class="flex h-[38px] items-center justify-center border-t border-[#dde5ea] bg-white text-[10px] text-[#7d8b95] [grid-column:1/-1] dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500">
             LANR INVERSIONES E.I.R.L. &middot; RUC 20609096838 &middot; Sistema Interno &middot; {{ date('Y') }}
         </footer>
 
