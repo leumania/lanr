@@ -6,15 +6,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class CompraLogistica extends Model
+class Despacho extends Model
 {
-    protected $table = 'compras_logistica';
+    protected $table = 'despachos_logistica';
 
-    protected $fillable = ['tramite_id', 'proveedor_id', 'solicitud_tesoreria_id', 'fecha_compra', 'tipo_comprobante', 'nro_comprobante', 'monto', 'nombre_original', 'nombre_archivo', 'creado_por'];
+    protected $fillable = [
+        'tramite_id', 'proveedor_id', 'medio_envio', 'responsable_transporte',
+        'costo_envio', 'observacion', 'guia_numero', 'guia_fecha', 'guia_pendiente', 'creado_por',
+    ];
 
     protected function casts(): array
     {
-        return ['fecha_compra' => 'date', 'monto' => 'decimal:2'];
+        return [
+            'guia_fecha' => 'date',
+            'guia_pendiente' => 'boolean',
+            'costo_envio' => 'decimal:2',
+        ];
     }
 
     public function tramite(): BelongsTo
@@ -27,11 +34,6 @@ class CompraLogistica extends Model
         return $this->belongsTo(Proveedor::class);
     }
 
-    public function solicitudTesoreria(): BelongsTo
-    {
-        return $this->belongsTo(SolicitudTesoreria::class, 'solicitud_tesoreria_id');
-    }
-
     public function creador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'creado_por');
@@ -39,6 +41,6 @@ class CompraLogistica extends Model
 
     public function detalles(): HasMany
     {
-        return $this->hasMany(CompraDetalle::class, 'compra_id');
+        return $this->hasMany(DespachoDetalle::class, 'despacho_id');
     }
 }

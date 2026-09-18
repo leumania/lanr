@@ -18,8 +18,13 @@ class Regularizations extends Component
             ->where('responsable_id', auth()->id());
 
         return view('livewire.admin.regularizations', [
-            'pendientes' => (clone $base)->where('estado', 'Pendiente')->latest('fecha_creacion')->get(),
-            'completadas' => (clone $base)->where('estado', '!=', 'Pendiente')->latest('fecha_regularizacion')->take(15)->get(),
+            // Esta bandeja está pensada específicamente para regularización de compra
+            // (comprobantes/detalle de compra), tal como en V11. Otros tipos de
+            // regularización (p.ej. guía de remisión) se listan aparte, sin las
+            // columnas de comprobantes/monto que no les aplican.
+            'pendientes' => (clone $base)->where('estado', 'Pendiente')->where('tipo', 'Regularización de compra')->latest('fecha_creacion')->get(),
+            'completadas' => (clone $base)->where('estado', '!=', 'Pendiente')->where('tipo', 'Regularización de compra')->latest('fecha_regularizacion')->take(15)->get(),
+            'otrasPendientes' => (clone $base)->where('estado', 'Pendiente')->where('tipo', '!=', 'Regularización de compra')->latest('fecha_creacion')->get(),
         ]);
     }
 }

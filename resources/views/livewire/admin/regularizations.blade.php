@@ -55,6 +55,30 @@
         @endif
     </flux:card>
 
+    @if ($otrasPendientes->isNotEmpty())
+        <flux:card class="p-3">
+            <flux:heading size="lg" class="text-[#142f44]">Otras regularizaciones pendientes</flux:heading>
+            <flux:text class="mt-1 text-zinc-500">Por ejemplo, guías de remisión pendientes de adjuntar.</flux:text>
+
+            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach ($otrasPendientes as $regularizacion)
+                    <div class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                        <div class="font-semibold text-[#142f44] dark:text-white">{{ $regularizacion->tramite->tracking }}</div>
+                        <div class="mt-0.5 text-sm text-zinc-500">N° {{ $regularizacion->tramite->numero }} · Creado por {{ $regularizacion->tramite->creador?->name }}</div>
+
+                        <flux:badge size="sm" color="amber" icon="clock" class="mt-2">
+                            {{ $regularizacion->tipo }}
+                        </flux:badge>
+
+                        <flux:button class="mt-3 w-full" size="sm" variant="primary" icon="clipboard-document-check" :href="route('tramites.show', $regularizacion->tramite)" wire:navigate>
+                            Regularizar
+                        </flux:button>
+                    </div>
+                @endforeach
+            </div>
+        </flux:card>
+    @endif
+
     @if ($completadas->isNotEmpty())
         <flux:card class="p-3">
             <flux:heading size="lg" class="text-[#142f44]">Completadas recientemente</flux:heading>
