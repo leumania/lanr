@@ -1010,7 +1010,7 @@ new class extends Component
     protected function refrescar(): void
     {
         $this->tramite->refresh();
-        $this->tramite->load(['approvals.usuario', 'history.usuario', 'gestionLogistica', 'gestionSp', 'attachments', 'items.imagenes', 'archivosLogistica', 'regularizaciones.responsable', 'solicitudesTesoreria.pagos', 'despachos.detalles.item']);
+        $this->tramite->load(['approvals.usuario', 'history.usuario', 'gestionLogistica', 'gestionSp.archivosPago', 'attachments', 'items.imagenes', 'archivosLogistica', 'regularizaciones.responsable', 'solicitudesTesoreria.pagos', 'despachos.detalles.item']);
     }
 
         public function recibirEnObra(): void
@@ -1091,6 +1091,7 @@ new class extends Component
     public $monto_pagado = 0;
     public string $nro_operacion = '';
     public $comprobante_pago;
+    public array $evidencias_adicionales_sp = [];
 
     public function registrarPagoSp(): void
     {
@@ -1112,6 +1113,8 @@ new class extends Component
             'fecha_pago' => 'required|date',
             'monto_pagado' => 'required|numeric|min:0.01',
             'comprobante_pago' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'evidencias_adicionales_sp' => 'nullable|array|max:10',
+            'evidencias_adicionales_sp.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
         ], [
             'medio_pago.required' => 'Selecciona un medio de pago.',
             'medio_pago.in' => 'Selecciona un medio de pago válido.',
@@ -1122,6 +1125,8 @@ new class extends Component
             'comprobante_pago.required' => 'Debes adjuntar el comprobante de pago.',
             'comprobante_pago.mimes' => 'El comprobante debe ser PDF o imagen (jpg, png, webp).',
             'comprobante_pago.max' => 'El comprobante no debe superar 10 MB.',
+            'evidencias_adicionales_sp.*.mimes' => 'Cada evidencia adicional debe ser PDF o imagen (jpg, png, webp).',
+            'evidencias_adicionales_sp.*.max' => 'Cada evidencia adicional no debe superar 10 MB.',
         ]);
 
         $montoSolicitado = (float) $this->tramite->abono;
@@ -1152,6 +1157,13 @@ new class extends Component
                 'nombre_archivo' => $nombreArchivo,
             ]);
 
+            foreach ($this->evidencias_adicionales_sp as $evidencia) {
+                $gestion->archivosPago()->create([
+                    'nombre_original' => $evidencia->getClientOriginalName(),
+                    'nombre_archivo' => $evidencia->store('comprobantes-sp', 'public'),
+                ]);
+            }
+
             $gestion->update([
                 'pagado_por' => $user->id,
                 'medio_pago' => $this->medio_pago,
@@ -1176,6 +1188,7 @@ new class extends Component
         });
 
         session()->flash('status', 'Pago registrado correctamente.');
+        $this->reset(['comprobante_pago', 'evidencias_adicionales_sp']);
         $this->refrescar();
     }
 
@@ -1680,6 +1693,25 @@ new class extends Component
 
                             @error('comprobante_pago') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror
                         </div>
+
+                        <div class="flex flex-col gap-1 sm:col-span-2">
+                            <flux:label>Evidencias adicionales (opcional)</flux:label>
+                            <input type="file" wire:model="evidencias_adicionales_sp" multiple class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" />
+
+                            <div wire:loading wire:target="evidencias_adicionales_sp" class="text-xs text-zinc-500">
+                                Subiendo archivos...
+                            </div>
+
+                            @if ($evidencias_adicionales_sp)
+                                <ul class="text-xs text-emerald-600">
+                                    @foreach ($evidencias_adicionales_sp as $evidencia)
+                                        <li>{{ $evidencia->getClientOriginalName() }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+
+                            @error('evidencias_adicionales_sp.*') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror
+                        </div>
                     </div>
 
                     <div>
@@ -1698,6 +1730,22 @@ new class extends Component
                     S/ {{ number_format($tramite->gestionSp->monto_pagado, 2) }} ·
                     {{ $tramite->gestionSp->fecha_pago?->format('Y-m-d') }}
                 </flux:text>
+
+                @if ($tramite->gestionSp->archivosPago->isNotEmpty())
+                    <div>
+                        <flux:heading size="sm" class="mb-2">Evidencias del pago</flux:heading>
+                        <ul class="flex flex-col gap-1">
+                            @foreach ($tramite->gestionSp->archivosPago as $archivo)
+                                <li class="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700">
+                                    <span>{{ $archivo->nombre_original }}</span>
+                                    <a href="{{ route('sp.payment-files.download', $archivo) }}" class="text-xs text-blue-600 underline hover:text-blue-800">
+                                        Descargar
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 @if (auth()->user()->hasRole('Gerencia General'))
                     <div>

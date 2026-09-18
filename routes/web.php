@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\TramiteSearchController;
 use App\Models\ArchivoLogistica;
+use App\Models\ArchivoPagoSp;
 use App\Models\Attachment;
 use App\Models\CotizacionArchivo;
 use App\Models\Item;
@@ -164,6 +165,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return Storage::disk('public')->download($pago->nombre_archivo, $pago->nombre_original);
     })->name('sp.payments.download');
+
+    Route::get('sp-pagos-archivos/{archivo}/descargar', function (ArchivoPagoSp $archivo) {
+        abort_unless(auth()->user()->can('view', $archivo->gestion->tramite), 404);
+
+        return Storage::disk('public')->download($archivo->nombre_archivo, $archivo->nombre_original);
+    })->name('sp.payment-files.download');
 
     Route::get('pagos-tesoreria/{pago}/descargar', function (PagoTesoreria $pago) {
         abort_unless(auth()->user()->hasAnyRole(['Tesorería', 'Logística', 'Sistemas']), 404);

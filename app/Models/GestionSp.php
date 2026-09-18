@@ -46,4 +46,9 @@ class GestionSp extends Model
     {
         return $this->hasMany(SpPagoMultiple::class, 'gestion_sp_id');
     }
+
+    public function archivosPago(): HasMany
+    {
+        return $this->hasMany(ArchivoPagoSp::class, 'gestion_sp_id');
+    }
 }
