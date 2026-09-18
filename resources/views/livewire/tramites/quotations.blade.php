@@ -33,6 +33,37 @@
             </div>
         </flux:card>
     @endif
+    @if ($this->matriz['proveedores']->isNotEmpty())
+        <flux:card class="p-3">
+            <flux:heading size="lg" class="text-[#142f44]">Comparativo de precios por proveedor</flux:heading>
+            <flux:text class="mt-1 text-zinc-500">Precio unitario cotizado por cada proveedor para cada ítem. El menor precio de cada fila se resalta en verde.</flux:text>
+            <div class="mt-3 overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="border-b border-zinc-100 text-xs text-zinc-500 uppercase dark:border-zinc-800">
+                            <th class="pb-2 font-medium">Ítem</th>
+                            @foreach ($this->matriz['proveedores'] as $proveedor)
+                                <th class="pb-2 font-medium">{{ $proveedor->nombre }}</th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @foreach ($this->matriz['filas'] as $fila)
+                            <tr>
+                                <td class="py-2">{{ $fila['item']->descripcion }}</td>
+                                @foreach ($this->matriz['proveedores'] as $proveedor)
+                                    @php($precio = $fila['precios'][$proveedor->id] ?? null)
+                                    <td class="py-2 {{ $precio !== null && $precio > 0 && $precio === $fila['menor'] ? 'font-bold text-emerald-600' : '' }}">
+                                        {{ $precio !== null ? 'S/ '.number_format($precio, 2) : '—' }}
+                                    </td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </flux:card>
+    @endif
     @if (auth()->user()->hasAnyRole(['Logística', 'Administración', 'Sistemas']))
         <flux:card><flux:heading size="lg">Proveedores</flux:heading><form wire:submit="crearProveedor" class="mt-3 grid gap-3 sm:grid-cols-3"><flux:input label="Nombre" wire:model="proveedorNombre" /><flux:input label="RUC / DNI" wire:model="proveedorDocumento" /><div class="flex items-end"><flux:button type="submit" variant="primary">Registrar proveedor</flux:button></div></form><div class="mt-3 flex flex-wrap gap-2">@foreach ($proveedores as $proveedor)<flux:badge>{{ $proveedor->nombre }}{{ $proveedor->documento ? ' · ' . $proveedor->documento : '' }}</flux:badge>@endforeach</div></flux:card>
     @endif
@@ -42,5 +73,5 @@
     @if (auth()->user()->hasRole('Logística'))
         <flux:card><flux:heading size="lg">Nueva cotización</flux:heading><form wire:submit="crearCotizacion($proveedorSeleccionado)" class="mt-3 space-y-3"><div class="grid gap-3 sm:grid-cols-3"><flux:select label="Proveedor" wire:model="proveedorSeleccionado"><option value="">Selecciona un proveedor</option>@foreach ($proveedores as $proveedor)<option value="{{ $proveedor->id }}">{{ $proveedor->nombre }}</option>@endforeach</flux:select><flux:select label="Tipo de sustento" wire:model="tipoSustento"><option value="Cotización">Cotización</option><option value="Proveedor habitual">Proveedor habitual</option></flux:select><flux:input type="date" label="Fecha" wire:model="fecha" /></div><flux:textarea label="Observación" wire:model="observacion" /><flux:input type="file" label="Sustento" wire:model="archivos" multiple /><div class="space-y-3">@foreach ($tramite->items as $item)<div class="grid gap-3 rounded border p-3 sm:grid-cols-3"><div><span class="font-medium">{{ $item->descripcion }}</span><span class="block text-sm text-zinc-500">Máximo: {{ $item->comprar }}</span></div><flux:input type="number" step="0.01" label="Cantidad" wire:model="items.{{ $item->id }}.cantidad" /><flux:input type="number" step="0.01" label="Precio unitario" wire:model="items.{{ $item->id }}.precio_unitario" /></div>@endforeach</div><div class="flex justify-end"><flux:button type="submit" variant="primary">Guardar cotización</flux:button></div></form></flux:card>
     @endif
-    <flux:card><flux:heading size="lg">Cotizaciones registradas</flux:heading><div class="mt-3 divide-y divide-zinc-100 dark:divide-zinc-800">@forelse ($tramite->cotizaciones as $cotizacion)<div class="py-3"><div class="flex flex-wrap items-center justify-between gap-3"><div><span class="font-semibold">{{ $cotizacion->proveedor->nombre }}</span><span class="ms-2 text-sm text-zinc-500">{{ $cotizacion->tipo_sustento }} · {{ $cotizacion->fecha?->format('d/m/Y') }}</span></div><div class="flex items-center gap-2"><flux:badge>{{ $cotizacion->estado }}</flux:badge>@if (auth()->user()->hasRole('Logística') && $cotizacion->estado === 'Borrador')<flux:button size="sm" variant="primary" wire:click="enviar({{ $cotizacion->id }})">Enviar a Administración</flux:button>@endif</div></div><div class="mt-2 text-sm text-zinc-500">Total cotizado: S/ {{ number_format($cotizacion->items->sum(fn ($item) => $item->cantidad * $item->precio_unitario), 2) }}</div>@if (auth()->user()->hasRole('Administración') && in_array($cotizacion->estado, ['Enviada a Administración', 'Autorizada']))<div class="mt-3 space-y-2">@foreach ($cotizacion->items as $cotizacionItem)<div class="grid items-center gap-3 sm:grid-cols-3"><span>{{ $cotizacionItem->item->descripcion }} <small class="text-zinc-500">(cotizado: {{ $cotizacionItem->cantidad }})</small></span><flux:input type="number" step="0.01" wire:model="seleccion.{{ $cotizacionItem->id }}" placeholder="Cantidad a autorizar" /><span class="text-sm text-zinc-500">S/ {{ number_format($cotizacionItem->precio_unitario, 2) }}</span></div>@endforeach</div>@endif</div>@empty<flux:text class="py-3">No hay cotizaciones registradas.</flux:text>@endforelse</div>@if (auth()->user()->hasRole('Administración') && $tramite->cotizaciones->isNotEmpty())<div class="mt-3 flex justify-end"><flux:button variant="primary" wire:click="autorizar">Autorizar selección</flux:button></div>@endif</flux:card>
+    <flux:card><flux:heading size="lg">Cotizaciones registradas</flux:heading><div class="mt-3 divide-y divide-zinc-100 dark:divide-zinc-800">@forelse ($tramite->cotizaciones as $cotizacion)<div class="py-3"><div class="flex flex-wrap items-center justify-between gap-3"><div><span class="font-semibold">{{ $cotizacion->proveedor->nombre }}</span><span class="ms-2 text-sm text-zinc-500">{{ $cotizacion->tipo_sustento }} · {{ $cotizacion->fecha?->format('d/m/Y') }}</span></div><div class="flex items-center gap-2"><flux:badge>{{ $cotizacion->estado }}</flux:badge>@if (auth()->user()->hasRole('Logística') && $cotizacion->estado === 'Borrador')<flux:button size="sm" variant="primary" wire:click="enviar({{ $cotizacion->id }})">Enviar a Administración</flux:button>@endif</div></div><div class="mt-2 text-sm text-zinc-500">Total cotizado: S/ {{ number_format($cotizacion->items->sum(fn ($item) => $item->cantidad * $item->precio_unitario), 2) }}</div>@if ($cotizacion->archivos->isNotEmpty())<div class="mt-2 flex flex-wrap items-center gap-2"><span class="text-sm text-zinc-500">Sustento:</span>@foreach ($cotizacion->archivos as $archivo)<flux:button size="sm" variant="ghost" href="{{ route('quotations.files.download', $archivo) }}" target="_blank">{{ $archivo->nombre_original }}</flux:button>@endforeach</div>@endif@if (auth()->user()->hasRole('Administración') && in_array($cotizacion->estado, ['Enviada a Administración', 'Autorizada']))<div class="mt-3 space-y-2">@foreach ($cotizacion->items as $cotizacionItem)<div class="grid items-center gap-3 sm:grid-cols-3"><span>{{ $cotizacionItem->item->descripcion }} <small class="text-zinc-500">(cotizado: {{ $cotizacionItem->cantidad }})</small></span><flux:input type="number" step="0.01" wire:model="seleccion.{{ $cotizacionItem->id }}" placeholder="Cantidad a autorizar" /><span class="text-sm text-zinc-500">S/ {{ number_format($cotizacionItem->precio_unitario, 2) }}</span></div>@endforeach</div>@endif</div>@empty<flux:text class="py-3">No hay cotizaciones registradas.</flux:text>@endforelse</div>@if (auth()->user()->hasRole('Administración') && $tramite->cotizaciones->isNotEmpty())<div class="mt-3 flex justify-end"><flux:button variant="primary" wire:click="autorizar">Autorizar selección</flux:button></div>@endif</flux:card>
 </div>

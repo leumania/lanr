@@ -46,7 +46,7 @@ class Quotations extends Component
         abort_unless($tramite->tipo === 'REQ', 404);
         abort_unless(auth()->user()->hasAnyRole(['Logística', 'Administración', 'Sistemas']), 403);
         abort_unless(auth()->user()->obra_activa_id === $tramite->obra_id, 404);
-        $this->tramite = $tramite->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'autorizacionesCompra.items.proveedor']);
+        $this->tramite = $tramite->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'cotizaciones.archivos', 'autorizacionesCompra.items.proveedor']);
         $this->fecha = now()->format('Y-m-d');
         $this->items = $tramite->items->mapWithKeys(fn ($item) => [$item->id => ['cantidad' => (float) $item->comprar, 'precio_unitario' => 0]])->all();
     }
@@ -89,6 +89,19 @@ class Quotations extends Component
             return;
         }
 
+        $itemsPorId = $this->tramite->items->keyBy('id');
+        foreach ($itemsValidos as $itemId => $item) {
+            $itemModel = $itemsPorId->get((int) $itemId);
+            if ($itemModel && (float) $item['cantidad'] > (float) $itemModel->comprar) {
+                $this->addError(
+                    'items.'.$itemId.'.cantidad',
+                    "La cantidad cotizada para \"{$itemModel->descripcion}\" ({$item['cantidad']}) no puede superar lo pendiente de comprar ({$itemModel->comprar})."
+                );
+
+                return;
+            }
+        }
+
         DB::transaction(function () use ($proveedor, $itemsValidos): void {
             $cotizacion = Cotizacion::create([
                 'tramite_id' => $this->tramite->id,
@@ -110,7 +123,7 @@ class Quotations extends Component
         });
 
         $this->archivos = [];
-        $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'autorizacionesCompra.items.proveedor']);
+        $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'cotizaciones.archivos', 'autorizacionesCompra.items.proveedor']);
         session()->flash('status', 'Cotización guardada como borrador.');
     }
 
@@ -125,7 +138,7 @@ class Quotations extends Component
         foreach (User::role('Administración')->get() as $user) {
             Notificacion::create(['usuario_id' => $user->id, 'tramite_id' => $this->tramite->id, 'titulo' => 'Cotización pendiente de autorización', 'mensaje' => $this->tramite->tracking, 'tipo' => 'accion']);
         }
-        $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'autorizacionesCompra.items.proveedor']);
+        $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'cotizaciones.archivos', 'autorizacionesCompra.items.proveedor']);
     }
 
     public function autorizar(): void
@@ -163,6 +176,7 @@ class Quotations extends Component
                 SolicitudTesoreria::create([
                     'tramite_id' => $this->tramite->id,
                     'autorizacion_id' => $autorizacion->id,
+                    'proveedor_id' => $proveedorId,
                     'solicitado_por' => auth()->id(),
                     'motivo' => 'Pago de cotización autorizada del proveedor '.($proveedor->nombre ?? $proveedorId),
                     'monto' => $monto,
@@ -184,7 +198,7 @@ class Quotations extends Component
                 ]);
             }
         });
-        $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'autorizacionesCompra.items.proveedor']);
+        $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'cotizaciones.archivos', 'autorizacionesCompra.items.proveedor']);
         session()->flash('status', 'Compra autorizada y enviada a Tesorería.');
     }
 
@@ -209,7 +223,7 @@ class Quotations extends Component
         });
 
         $this->motivoAnulacion = '';
-        $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'autorizacionesCompra.items.proveedor']);
+        $this->tramite->refresh()->load(['items', 'cotizaciones.proveedor', 'cotizaciones.items.item', 'cotizaciones.archivos', 'autorizacionesCompra.items.proveedor']);
         session()->flash('status', 'Autorización anulada correctamente.');
     }
 
@@ -227,6 +241,38 @@ class Quotations extends Component
                 'pendiente' => max((float) $item->comprar - $autorizado, 0),
             ];
         })->values();
+    }
+
+    public function getMatrizProperty()
+    {
+        $cotizaciones = $this->tramite->cotizaciones
+            ->whereIn('estado', ['Borrador', 'Enviada a Administración', 'Autorizada'])
+            ->sortBy('id');
+
+        $proveedores = $cotizaciones->pluck('proveedor')->filter()->unique('id')->values();
+
+        $precios = [];
+        foreach ($cotizaciones as $cotizacion) {
+            foreach ($cotizacion->items as $cotizacionItem) {
+                $precios[$cotizacion->proveedor_id][$cotizacionItem->item_id] = (float) $cotizacionItem->precio_unitario;
+            }
+        }
+
+        $filas = $this->tramite->items->map(function ($item) use ($precios, $proveedores) {
+            $preciosItem = [];
+            foreach ($proveedores as $proveedor) {
+                $preciosItem[$proveedor->id] = $precios[$proveedor->id][$item->id] ?? null;
+            }
+            $menor = collect($preciosItem)->filter(fn ($precio) => $precio !== null && $precio > 0)->min();
+
+            return [
+                'item' => $item,
+                'precios' => $preciosItem,
+                'menor' => $menor,
+            ];
+        })->values();
+
+        return ['proveedores' => $proveedores, 'filas' => $filas];
     }
 
     public function render()
