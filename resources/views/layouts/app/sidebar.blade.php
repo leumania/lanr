@@ -29,6 +29,10 @@
                     <flux:sidebar.item icon="plus-circle" :href="route('tramites.create')" :current="request()->routeIs('tramites.create')" wire:navigate>
                         {{ __('Nuevo trámite') }}
                     </flux:sidebar.item>
+
+                    <flux:sidebar.item icon="magnifying-glass" :href="route('tramites.search')" :current="request()->routeIs('tramites.search')" wire:navigate>
+                        {{ __('Buscar trámite') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Gestión')" class="mt-4 grid [&_[data-flux-sidebar-heading]]:text-[#8fa4b3] [&_[data-flux-sidebar-item]]:text-[#d8e2e9] [&_[data-flux-sidebar-item]]:hover:bg-white/10 [&_[data-flux-sidebar-item]]:hover:text-white [&_[data-flux-sidebar-item][data-current]]:bg-white/15 [&_[data-flux-sidebar-item][data-current]]:text-white [&_svg]:text-[#8fa4b3]">

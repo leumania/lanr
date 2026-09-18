@@ -24,6 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('nuevo-tramite', 'tramites.create')->name('tramites.create');
     Route::view('nuevo-requerimiento', 'tramites.create-requirement')->name('tramites.create-requirement');
     Route::view('mis-tramites', 'tramites.index')->name('tramites.index');
+    Route::view('buscar-tramite', 'tramites.search')->name('tramites.search');
     Route::view('nueva-solicitud-pago', 'tramites.create-sp')->name('tramites.create-sp');
     Route::get('tramites/{tramite}/editar', function (Tramite $tramite) {
         abort_unless($tramite->obra_id === auth()->user()->obra_activa_id, 404);
@@ -90,7 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         auth()->user()->can('view', $tramite) || abort(404);
         abort_unless(in_array($tramite->tipo, ['REQ', 'SP'], true), 400);
 
-        $tramite->load(['items', 'approvals.usuario', 'creador']);
+        $tramite->load(['items', 'approvals.usuario', 'creador', 'spCuentas', 'spComprobantes']);
 
         if ($tramite->tipo === 'SP') {
             return Pdf::view('pdf.solicitud-pago', compact('tramite'))

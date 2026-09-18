@@ -7,10 +7,13 @@
         <flux:card>
             <flux:heading size="lg" class="mb-3">Historial del trámite</flux:heading>
             <div class="flex flex-col gap-3">
-                @forelse ($tramite->history->sortByDesc('created_at') as $evento)
+                @php
+                    $eventosVisibles = $tramite->history->sortByDesc('created_at')->reject->esRuido();
+                @endphp
+                @forelse ($eventosVisibles as $evento)
                     <div class="flex gap-3 border-b border-zinc-100 pb-3 last:border-0 dark:border-zinc-800">
                         <flux:icon.clock class="mt-1 size-4 shrink-0 text-zinc-400" />
-                        <div><div class="font-medium">{{ $evento->accion }}</div><div class="text-sm text-zinc-500">{{ $evento->usuario?->name }} · {{ $evento->created_at?->format('d/m/Y H:i') }}</div></div>
+                        <div><div class="font-medium">{{ $evento->mensajeHumanizado() }}</div><div class="text-sm text-zinc-500">{{ $evento->usuario?->name }} · {{ $evento->created_at?->format('d/m/Y H:i') }}</div></div>
                     </div>
                 @empty
                     <flux:text class="text-zinc-500">Sin movimientos registrados.</flux:text>

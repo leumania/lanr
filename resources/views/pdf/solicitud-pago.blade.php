@@ -43,6 +43,29 @@
         </tbody>
     </table>
     <div class="total">TOTAL: S/ {{ number_format($tramite->abono, 2) }}</div>
+
+    @if ($tramite->spCuentas->isNotEmpty())
+        <table class="items">
+            <thead><tr><th colspan="2">Cuentas bancarias</th></tr><tr><th style="width:50%">Banco</th><th style="width:50%">N° de cuenta / CCI</th></tr></thead>
+            <tbody>
+            @foreach ($tramite->spCuentas as $cuenta)
+                <tr><td>{{ $cuenta->banco ?: '-' }}</td><td>{{ $cuenta->cuenta_cci ?: '-' }}</td></tr>
+            @endforeach
+            </tbody>
+        </table>
+    @endif
+
+    @if ($tramite->spComprobantes->isNotEmpty())
+        <table class="items">
+            <thead><tr><th colspan="3">Comprobantes</th></tr><tr><th style="width:34%">Tipo</th><th style="width:33%">Número</th><th style="width:33%">Monto</th></tr></thead>
+            <tbody>
+            @foreach ($tramite->spComprobantes as $comprobante)
+                <tr><td>{{ $comprobante->tipo ?: '-' }}</td><td>{{ $comprobante->numero ?: '-' }}</td><td>S/ {{ number_format($comprobante->monto, 2) }}</td></tr>
+            @endforeach
+            </tbody>
+        </table>
+    @endif
+
     <div class="observaciones"><strong>Observaciones:</strong><br>{{ $tramite->observaciones ?: 'Sin observaciones.' }}</div>
     <div class="firmas">
         @foreach ($tramite->approvals as $approval)<div class="firma">{{ strtoupper($approval->rol) }}<br>{{ $approval->usuario->name }}</div>@endforeach

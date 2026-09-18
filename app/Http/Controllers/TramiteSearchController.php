@@ -12,8 +12,12 @@ class TramiteSearchController
         $term = trim((string) $request->query('q', ''));
         abort_if(mb_strlen($term) < 2, 422, 'La búsqueda debe tener al menos 2 caracteres.');
 
+        $tipo = strtoupper(trim((string) $request->query('tipo', '')));
+        $tipo = in_array($tipo, ['REQ', 'SP'], true) ? $tipo : null;
+
         $tramites = Tramite::query()
             ->where('obra_id', $request->user()->obra_activa_id)
+            ->when($tipo, fn ($query) => $query->where('tipo', $tipo))
             ->where(function ($query) use ($term) {
                 $query->where('tracking', 'like', "%{$term}%")
                     ->orWhere('numero', 'like', "%{$term}%")
