@@ -67,7 +67,7 @@ class Reimbursements extends Component
 
     public function authorizeReimbursement(int $id): void
     {
-        abort_unless(auth()->user()->hasAnyRole(['Administración', 'Gerencia General', 'Sistemas']), 403);
+        abort_unless(auth()->user()->hasRole('Administración'), 403);
         $reembolso = $this->accessible()->findOrFail($id);
         abort_unless($reembolso->estado === 'Pendiente', 400);
         $reembolso->update(['estado' => 'Autorizado', 'autorizado_por' => auth()->id(), 'fecha_autorizacion' => now()]);
@@ -75,7 +75,7 @@ class Reimbursements extends Component
 
     public function attend(int $id): void
     {
-        abort_unless(auth()->user()->hasAnyRole(['Tesorería', 'Sistemas']), 403);
+        abort_unless(auth()->user()->hasRole('Tesorería'), 403);
         $reembolso = $this->accessible()->findOrFail($id);
         abort_unless($reembolso->estado === 'Autorizado', 400);
         $this->validate(['evidenciaAtencion' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240']);
