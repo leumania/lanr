@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block body_class %}page-quotation-management{% endblock %}
+{% block title %}Gestión de requerimiento | LANR{% endblock %}
+{% block content %}
+<div class="qm-page">
+  <div class="qm-header">
+    <div>
+      <div class="qm-kicker">GESTIÓN LOGÍSTICA DEL REQUERIMIENTO</div>
+      <h1>{{ t.tracking }}</h1>
+      <p>{{ t.numero or '-' }} · {{ t.fecha }} · <span class="qm-state">{{ t.estado }}</span></p>
+    </div>
+    <a class="btn" href="{{ url_for('request_detail', tid=t.id) }}"><i class="fa-solid fa-arrow-left"></i> Volver al requerimiento</a>
+  </div>
+
+  <div class="qm-stats">
+    <div><span>Materiales</span><strong>{{ items|length }}</strong></div>
+    <div><span>Cotizaciones</span><strong>{{ cotizaciones|length }}</strong></div>
+    <div><span>Pagos por proveedor</span><strong>{{ pagos|length }}</strong></div>
+    <div><span>Comprobantes</span><strong>{{ compras|length }}</strong></div>
+  </div>
+
+  <div class="qm-progress-list card">
+    {% for item in items %}
+    {% set req = item.comprar|float %}
+    {% set auth = autorizado.get(item.id,0)|float %}
+    {% set buy = comprado.get(item.id,0)|float %}
+    {% set sent = despachado.get(item.id,0)|float %}
+    <div class="qm-progress-row">
+      <div class="qm-progress-product">
+        <div class="qm-priority-line">
+          <span class="req-priority-badge {{ 'urgent' if item.prioridad=='Urgente' else ('priority' if item.prioridad=='Prioritario' else 'normal') }}">{{ item.prioridad or 'Normal' }}</span>
+          {% if item.fecha_requerida %}<span class="qm-date">Req. {{ item.fecha_requerida }}</span>{% endif %}
+        </div>
+        <strong>{{ item.descripcion }}</strong><small>{{ item.unidad }} · Requerido {{ req|fmt_num }}</small>
+      </div>
+      <div><span>Autorizado</span><strong>{{ auth|fmt_num }}</strong></div>
+      <div><span>Comprado</span><strong>{{ buy|fmt_num }}</strong></div>
+      <div><span>Despachado</span><strong>{{ sent|fmt_num }}</strong></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if user.role == 'Logística' %}
+  <details class="qm-section card" open>
+    <summary><span><i class="fa-solid fa-file-circle-plus"></i> Registrar cotización</span><small>Selecciona únicamente los productos cotizados por este proveedor.</small></summary>
+    <div class="qm-section-body">
+      <form method="post" enctype="multipart/form-data" action="{{ url_for('quotation_create', tid=t.id) }}" class="qm-quotation-form">
+        <div class="qm-form-grid">
+          <div class="field"><label>Proveedor *</label><select name="proveedor_id" required><option value="">Seleccione...</option>{% for p in proveedores %}<option value="{{ p.id }}">{{ p.nombre }}{% if p.documento %} · {{ p.documento }}{% endif %}</option>{% endfor %}</select></div>
+          <div class="field"><label>Tipo de sustento *</label><select name="tipo_sustento" class="qm-support-type" required><option value="Cotización">Cotización</option><option value="Proveedor habitual">Proveedor habitual</option></select></div>
+          <div class="field"><label>Fecha *</label><input type="date" name="fecha" value="{{ fecha_hoy }}" required></div>
+          <div class="field qm-file-field"><label>Archivo de cotización</label><input type="file" name="archivos" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple><small>Obligatorio para “Cotización”.</small></div>
+          <div class="field qm-span-2"><label>Motivo / observación</label><textarea name="observacion" rows="2" placeholder="Para proveedor habitual, indique obligatoriamente el motivo."></textarea></div>
+        </div>
+        <div class="qm-table-tools"><label class="qm-check-all"><input type="checkbox" class="qm-select-all"> Seleccionar todos</label><span>Puede seleccionar todos y luego quitar materiales.</span></div>
+        <div class="qm-items-table-wrap">
+          <table class="qm-table qm-quote-table">
+            <thead><tr><th></th><th>Material</th><th>A comprar</th><th>Prioridad</th><th>Fecha requerida</th><th>Cantidad cotizada</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
+            <tbody>
+            {% for item in items %}
+              <tr class="qm-quote-row">
+                <td><input type="checkbox" class="qm-item-check" name="selected_item[]" value="{{ item.id }}"></td>
+                <td><strong>{{ item.descripcion }}</strong><small>{{ item.unidad }}</small><input type="hidden" name="item_id[]" value="{{ item.id }}"></td>
+                <td>{{ item.comprar|fmt_num }} {{ item.unidad }}</td>
+                <td><span class="req-priority-badge {{ 'urgent' if item.prioridad=='Urgente' else ('priority' if item.prioridad=='Prioritario' else 'normal') }}">{{ item.prioridad or 'Normal' }}</span></td>
+                <td>{{ item.fecha_requerida or '—' }}</td>
+                <td><input class="qm-qty" type="number" name="cantidad[]" step="0.01" min="0.01" max="{{ item.comprar }}" disabled></td>
+                <td><input class="qm-price" type="number" name="precio_unitario[]" step="0.01" min="0.01" disabled></td>
+                <td><strong class="qm-line-total">S/ 0.00</strong></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="qm-form-footer"><div>Total cotizado <strong class="qm-grand-total">S/ 0.00</strong></div><button class="btn primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Guardar cotización</button></div>
+      </form>
+
+      <details class="qm-provider-add"><summary>Registrar nuevo proveedor</summary><form method="post" action="{{ url_for('provider_create') }}"><input type="hidden" name="tid" value="{{ t.id }}"><input name="nombre" required placeholder="Nombre o razón social"><input name="documento" placeholder="RUC / documento"><button class="btn small">Agregar</button></form></details>
+    </div>
+  </details>
+  {% endif %}
+
+  <details class="qm-section card" {% if cotizaciones %}open{% endif %}>
+    <summary><span><i class="fa-solid fa-file-invoice-dollar"></i> Cotizaciones registradas</span><small>{{ cotizaciones|length }} registro(s)</small></summary>
+    <div class="qm-section-body qm-card-grid">
+      {% for q in cotizaciones %}
+      <article class="qm-quote-card">
+        <div class="qm-card-head"><div><strong>{{ q.proveedor_nombre }}</strong><span>#{{ q.id }} · {{ q.tipo_sustento }} · {{ q.fecha or '-' }}</span></div><span class="status {% if q.estado=='Enviada a Sara' %}done{% endif %}">{{ q.estado }}</span></div>
+        <div class="qm-mini-items">{% for qi in qitems if qi.cotizacion_id==q.id %}<span>{{ qi.descripcion }} · {{ qi.cantidad|fmt_num }} {{ qi.unidad }} × S/ {{ '%.2f'|format(qi.precio_unitario) }}</span>{% endfor %}</div>
+        <div class="qm-card-total">Total <strong>S/ {{ '%.2f'|format(q.total or 0) }}</strong></div>
+        <div class="qm-card-actions">{% for f in qfiles if f.cotizacion_id==q.id %}<a class="btn small" target="_blank" href="{{ url_for('quotation_file', fid=f.id) }}"><i class="fa-regular fa-file"></i> Ver sustento</a>{% endfor %}{% if user.role=='Logística' and q.estado=='Borrador' %}<form method="post" action="{{ url_for('quotation_send', qid=q.id) }}"><button class="btn primary small"><i class="fa-solid fa-paper-plane"></i> Enviar a Sara</button></form>{% endif %}</div>
+        {% if q.observacion %}<p class="qm-note">{{ q.observacion }}</p>{% endif %}
+      </article>
+      {% else %}<div class="empty">Todavía no hay cotizaciones registradas.</div>{% endfor %}
+    </div>
+  </details>
+
+  {% if user.role in ['Administración','Sistemas'] %}
+  <details class="qm-section card" open>
+    <summary><span><i class="fa-solid fa-scale-balanced"></i> Comparación y autorización por producto</span><small>Puede dividir una cantidad entre varios proveedores.</small></summary>
+    <div class="qm-section-body">
+      {% set sent = qitems|selectattr('estado','equalto','Enviada a Sara')|list %}
+      {% if sent %}
+      <form method="post" action="{{ url_for('quotation_authorize', tid=t.id) }}">
+        <div class="qm-items-table-wrap"><table class="qm-table qm-compare"><thead><tr><th>Elegir</th><th>Producto</th><th>Requerido</th><th>Pendiente</th><th>Proveedor</th><th>Cotizado</th><th>Precio unit.</th><th>Subtotal cotizado</th><th>Cant. autorizar</th></tr></thead><tbody>
+        {% for qi in sent %}{% set item = items|selectattr('id','equalto',qi.item_id)|first %}{% set pending = [(item.comprar|float)-(autorizado.get(item.id,0)|float),0]|max %}
+          <tr><td><input type="checkbox" name="selection[]" value="{{ qi.cotizacion_id }}:{{ qi.item_id }}"></td><td><strong>{{ qi.descripcion }}</strong><small>{{ qi.unidad }}</small></td><td>{{ item.comprar|fmt_num }}</td><td><strong>{{ pending|fmt_num }}</strong></td><td>{{ qi.proveedor_nombre }}</td><td>{{ qi.cantidad|fmt_num }}</td><td>S/ {{ '%.2f'|format(qi.precio_unitario) }}</td><td>S/ {{ '%.2f'|format((qi.cantidad|float)*(qi.precio_unitario|float)) }}</td><td><input type="number" name="qty_{{ qi.cotizacion_id }}_{{ qi.item_id }}" step="0.01" min="0" max="{{ [qi.cantidad,pending]|min }}" placeholder="Máx. {{ [qi.cantidad,pending]|min|fmt_num }}"></td></tr>
+        {% endfor %}</tbody></table></div>
+        {% if user.role=='Administración' %}<button class="btn primary topgap"><i class="fa-solid fa-check"></i> Autorizar selección</button>{% endif %}
+      </form>
+      {% else %}<div class="empty">No hay cotizaciones enviadas pendientes de comparación.</div>{% endif %}
+    </div>
+  </details>
+  {% endif %}
+
+  <details class="qm-section card" open>
+    <summary><span><i class="fa-solid fa-building-columns"></i> Pagos por proveedor</span><small>Cada proveedor se gestiona de forma independiente.</small></summary>
+    <div class="qm-section-body qm-card-grid">
+      {% for p in pagos %}
+      <article class="qm-payment-card">
+        <div class="qm-card-head"><div><strong>{{ p.proveedor_nombre or '-' }}</strong><span>Pago #{{ p.id }} · Autorización #{{ p.autorizacion_id or '-' }}</span></div><span class="status {% if p.estado=='Atendido' %}done{% endif %}">{{ p.estado }}</span></div>
+        <div class="qm-mini-items">{% for pi in pago_items if pi.solicitud_id==p.id %}<span>{{ pi.descripcion }} · {{ pi.cantidad|fmt_num }} {{ pi.unidad }} × S/ {{ '%.2f'|format(pi.precio_unitario) }}</span>{% endfor %}</div>
+        <div class="qm-card-total">Total <strong>S/ {{ '%.2f'|format(p.monto or 0) }}</strong></div>
+        <div class="qm-card-actions">
+          {% if user.role in ['Tesorería','Sistemas'] %}<a class="btn small" href="{{ url_for('treasury_detail', sid=p.id) }}"><i class="fa-solid fa-eye"></i> Ver pago</a>{% endif %}
+          {% if user.role=='Logística' and p.estado=='Pendiente' and (p.monto|float) < 1900 %}
+          <details class="qm-direct-pay"><summary>Atender desde Logística</summary><form method="post" enctype="multipart/form-data" action="{{ url_for('logistics_provider_payment', sid=p.id) }}"><select name="forma_pago" required><option value="">Seleccione...</option><option>Caja Logística</option><option>Pago personal</option></select><input type="date" name="fecha_pago" value="{{ fecha_hoy }}" required><input type="file" name="comprobante_pago" accept=".pdf,.jpg,.jpeg,.png,.webp"><button class="btn small primary">Registrar pago</button></form></details>
+          {% endif %}
+        </div>
+      </article>
+      {% else %}<div class="empty">Todavía no existen pagos generados.</div>{% endfor %}
+    </div>
+  </details>
+
+  {% if user.role == 'Logística' %}
+  <details class="qm-section card" open>
+    <summary><span><i class="fa-solid fa-receipt"></i> Compra y comprobantes</span><small>Registra cada comprobante con su proveedor y cantidades.</small></summary>
+    <div class="qm-section-body">
+      {% set paid = pagos|selectattr('estado','equalto','Atendido')|list %}
+      {% if paid %}
+      <div class="qm-purchase-grid">
+        {% for p in paid %}
+        <form class="qm-purchase-card" method="post" enctype="multipart/form-data" action="{{ url_for('logistics_receipts', tid=t.id) }}">
+          <input type="hidden" name="proveedor_id" value="{{ p.proveedor_id }}"><input type="hidden" name="solicitud_id" value="{{ p.id }}">
+          <div class="qm-card-head"><div><strong>{{ p.proveedor_nombre }}</strong><span>Pago #{{ p.id }} atendido · S/ {{ '%.2f'|format(p.monto or 0) }}</span></div><i class="fa-solid fa-circle-check qm-ok-icon"></i></div>
+          <div class="qm-buy-items">
+            {% for pi in pago_items if pi.solicitud_id==p.id %}
+            <div><div><strong>{{ pi.descripcion }}</strong><small>{{ pi.cantidad|fmt_num }} {{ pi.unidad }} autorizadas</small></div><input type="hidden" name="item_id[]" value="{{ pi.item_id }}"><input type="number" name="cantidad_comprada[]" min="0" max="{{ pi.cantidad }}" step="0.01" placeholder="Cant. comprada"></div>
+            {% endfor %}
+          </div>
+          <div class="qm-form-grid compact"><div class="field"><label>Fecha *</label><input type="date" name="fecha_compra" value="{{ fecha_hoy }}" required></div><div class="field"><label>Tipo *</label><select name="tipo_comprobante" required><option>Factura</option><option>Boleta</option><option>Otro</option></select></div><div class="field"><label>N° comprobante *</label><input name="nro_comprobante" required></div><div class="field"><label>Monto *</label><input type="number" name="monto" min="0.01" step="0.01" required></div><div class="field qm-span-2"><label>Archivo *</label><input type="file" name="comprobante" accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" required></div></div>
+          <button class="btn primary" type="submit"><i class="fa-solid fa-receipt"></i> Registrar comprobante</button>
+        </form>
+        {% endfor %}
+      </div>
+      {% else %}<div class="empty">Cuando Tesorería atienda un pago, aquí aparecerá el proveedor habilitado para registrar su compra.</div>{% endif %}
+
+      {% if compras %}<div class="qm-history-block"><h4>Comprobantes registrados</h4>{% for c in compras %}<div class="qm-history-row"><div><strong>{{ c.proveedor_nombre or 'Proveedor no identificado' }}</strong><span>{{ c.tipo_comprobante }} {{ c.nro_comprobante }} · {{ c.fecha_compra }}</span><small>{% for ci in compra_items if ci.compra_id==c.id %}{{ ci.descripcion }}: {{ ci.cantidad_comprada|fmt_num }} {{ ci.unidad }}{% if not loop.last %} · {% endif %}{% endfor %}</small></div><div><strong>S/ {{ '%.2f'|format(c.monto or 0) }}</strong><a class="btn small" target="_blank" href="{{ url_for('view_purchase_file', pid=c.id) }}">Ver</a></div></div>{% endfor %}</div>{% endif %}
+    </div>
+  </details>
+
+  <details class="qm-section card" {% if compras %}open{% endif %}>
+    <summary><span><i class="fa-solid fa-truck"></i> Despacho a obra</span><small>Solo se pueden despachar cantidades ya compradas.</small></summary>
+    <div class="qm-section-body">
+      <form method="post" enctype="multipart/form-data" action="{{ url_for('logistics_dispatch', tid=t.id) }}" class="qm-dispatch-form">
+        <div class="qm-dispatch-items">
+          {% for item in items %}{% set available = [(comprado.get(item.id,0)|float)-(despachado.get(item.id,0)|float),0]|max %}
+          <div class="qm-dispatch-row {% if available <= 0 %}disabled{% endif %}"><div><strong>{{ item.descripcion }}</strong><small>{{ item.unidad }} · Comprado {{ comprado.get(item.id,0)|fmt_num }} · Ya despachado {{ despachado.get(item.id,0)|fmt_num }}</small></div><input type="hidden" name="dispatch_item_id[]" value="{{ item.id }}"><input type="number" name="cantidad_despachada[]" min="0" max="{{ available }}" step="0.01" placeholder="Pend. {{ available|fmt_num }}" {% if available <= 0 %}disabled{% endif %}></div>
+          {% endfor %}
+        </div>
+        <div class="qm-form-grid topgap"><div class="field"><label>Medio de envío *</label><select name="medio_envio" required><option value="">Seleccione...</option><option>Chofer de LANR</option><option>Encomienda</option><option>Transporte del proveedor</option><option>Otro</option></select></div><div class="field"><label>Responsable / empresa</label><input name="responsable_transporte"></div><div class="field"><label>Costo de envío</label><input type="number" name="costo_envio" min="0" step="0.01"></div><div class="field"><label>Evidencia del envío *</label><input type="file" name="evidencia_envio" accept=".jpg,.jpeg,.png,.webp" multiple required></div><div class="field qm-span-2"><label>Observación</label><textarea name="observacion_envio" rows="2"></textarea></div></div>
+        <div class="qm-guide-box"><strong>Guía de remisión</strong><div class="qm-guide-options"><label><input type="radio" name="guia_opcion" value="adjuntar" checked> Adjuntar guía ahora</label><label><input type="radio" name="guia_opcion" value="pendiente"> Guía pendiente a regularizar</label></div><div class="qm-form-grid qm-guide-fields"><div class="field"><label>N° guía</label><input name="guia_numero"></div><div class="field"><label>Fecha guía</label><input type="date" name="guia_fecha"></div><div class="field"><label>Archivo guía</label><input type="file" name="guia" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple></div><div class="field"><label>Comprobante transporte</label><input type="file" name="comprobante_transporte" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple></div></div></div>
+        <button class="btn primary topgap" type="submit"><i class="fa-solid fa-truck"></i> Registrar despacho</button>
+      </form>
+      {% if despachos %}<div class="qm-history-block"><h4>Despachos registrados</h4>{% for d in despachos %}<div class="qm-history-row"><div><strong>Despacho #{{ d.id }} · {{ d.medio_envio }}</strong><span>{{ d.creado }}{% if d.guia_numero %} · Guía {{ d.guia_numero }}{% elif d.guia_pendiente %} · Guía pendiente{% endif %}</span><small>{% for di in despacho_items if di.despacho_id==d.id %}{{ di.descripcion }}: {{ di.cantidad|fmt_num }} {{ di.unidad }}{% if not loop.last %} · {% endif %}{% endfor %}</small></div></div>{% endfor %}</div>{% endif %}
+    </div>
+  </details>
+  {% endif %}
+
+  {% if autorizaciones %}
+  <details class="qm-section card">
+    <summary><span><i class="fa-solid fa-clock-rotate-left"></i> Historial de autorizaciones</span><small>{{ autorizaciones|length }} autorización(es)</small></summary>
+    <div class="qm-section-body">{% for a in autorizaciones %}<div class="qm-auth"><div><strong>Autorización #{{ a.id }}</strong><span>{{ a.estado }} · {{ a.fecha }} · S/ {{ '%.2f'|format(a.total or 0) }}</span><div class="qm-mini-items">{% for ai in aitems if ai.autorizacion_id==a.id %}<span>{{ ai.descripcion }} → {{ ai.proveedor_nombre }} · {{ ai.cantidad|fmt_num }} {{ ai.unidad }} · S/ {{ '%.2f'|format(ai.subtotal) }}</span>{% endfor %}</div>{% if a.motivo_anulacion %}<small>Motivo: {{ a.motivo_anulacion }}</small>{% endif %}</div>{% if user.role=='Administración' and a.estado=='Autorizada' %}<form method="post" action="{{ url_for('authorization_cancel', aid=a.id) }}" class="qm-cancel"><input name="motivo" required placeholder="Motivo de anulación"><button class="btn danger small">Anular</button></form>{% endif %}</div>{% endfor %}</div>
+  </details>
+  {% endif %}
+</div>
+{% endblock %}

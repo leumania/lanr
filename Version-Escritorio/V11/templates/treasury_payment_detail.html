@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block body_class %}page-treasury-payment-detail{% endblock %} {% block title %}Gestión de Tesorería | LANR{%
+endblock %} {% block content %}
+<div class="td-head">
+  <div>
+    <h1>
+      {{ 'Pago de compra' if solicitud.origen in ['REQ-Compra','REQ-Cotizacion'] else ('Reembolso' if
+      solicitud.origen=='REQ-Reembolso' else 'Control de Caja de Logística') }}
+    </h1>
+    <p>{{ solicitud.tracking }} · Tesorería</p>
+  </div>
+  <a class="btn" href="{{ url_for('treasury_dashboard') }}"
+    ><i class="fa-solid fa-arrow-left"></i> Volver</a
+  >
+</div>
+<div class="td-card">
+  <div class="td-summary">
+    <div>
+      <span>Requerimiento</span><strong>{{ solicitud.tracking }}</strong>
+    </div>
+    <div>
+      <span>{{ 'Proveedor' if solicitud.origen=='REQ-Cotizacion' else 'Responsable / solicitante' }}</span
+      ><strong>{{ solicitud.proveedor_nombre if solicitud.origen=='REQ-Cotizacion' else (solicitud.solicitado_por_nombre or '-') }}</strong>
+    </div>
+    <div>
+      <span>Monto</span
+      ><strong>S/ {{ '%.2f'|format(solicitud.monto or 0) }}</strong>
+    </div>
+    <div>
+      <span>Estado</span
+      ><strong
+        ><span
+          class="status {% if solicitud.estado=='Atendido' %}done{% endif %}"
+          >{{ solicitud.estado }}</span
+        ></strong
+      >
+    </div>
+  </div>
+</div>
+{% if solicitud.origen in ['REQ-Compra','REQ-Cotizacion'] %}
+<div class="td-card">
+  <h2>Productos incluidos en este pago</h2>
+  <p class="sub">Este pago corresponde únicamente al proveedor y a los productos autorizados que se muestran a continuación.</p>
+  {% if productos_pago %}
+  <div class="tablewrap"><table class="td-table"><thead><tr><th>PRODUCTO</th><th>UNIDAD</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>SUBTOTAL</th></tr></thead><tbody>
+  {% for item in productos_pago %}<tr><td><strong>{{ item.descripcion }}</strong></td><td>{{ item.unidad }}</td><td>{{ item.cantidad|fmt_num }}</td><td>S/ {{ '%.2f'|format(item.precio_unitario or 0) }}</td><td><strong>S/ {{ '%.2f'|format(item.subtotal or 0) }}</strong></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<p class="sub">No hay detalle de productos asociado a este pago.</p>{% endif %}
+</div>
+{% endif %}
+<div class="td-card">
+  <h2>Comprobantes de compra</h2>
+  <p class="sub">
+    Si el proveedor ya emitió comprobante, aparecerá aquí. No es requisito para que Tesorería atienda el pago.
+  </p>
+  {% if compras %}
+  <table class="td-table">
+    <thead>
+      <tr>
+        <th>FECHA</th>
+        <th>TIPO</th>
+        <th>N° COMPROBANTE</th>
+        <th>MONTO</th>
+        <th>EVIDENCIA</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in compras %}
+      <tr>
+        <td>{{ c.fecha_compra }}</td>
+        <td>{{ c.tipo_comprobante }}</td>
+        <td>{{ c.nro_comprobante }}</td>
+        <td><strong>S/ {{ '%.2f'|format(c.monto or 0) }}</strong></td>
+        <td>
+          {% if c.nombre_archivo %}<a
+            class="btn"
+            target="_blank"
+            href="{{ url_for('view_purchase_file',pid=c.id) }}"
+            ><i class="fa-regular fa-eye"></i> Ver</a
+          >{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="sub">No hay comprobantes registrados.</p>
+  {% endif %}
+</div>
+{% if solicitud.origen == 'REQ-Caja-Logistica' %}
+<div class="td-card">
+  <h2>Registro de control</h2>
+  <p class="sub">
+    Este pago ya fue realizado con Caja de Logística. No requiere ninguna acción
+    de Tesorería y el proceso de Logística continúa normalmente.
+  </p>
+  <div class="td-note">
+    <i class="fa-solid fa-circle-info"></i> Este registro queda disponible para
+    control y consulta de Tesorería.
+  </div>
+</div>
+{% elif solicitud.estado == 'Pendiente' and user.role == 'Tesorería' %}
+<div class="td-card">
+  <h2>
+    {{ 'Registrar pago' if solicitud.origen in ['REQ-Compra','REQ-Cotizacion'] else 'Registrar
+    reembolso' }}
+  </h2>
+  <p class="sub">
+    Complete la operación y adjunte al menos una evidencia. Puede agregar los archivos uno por uno. La evidencia es obligatoria para transferencia, depósito, Yape, Plin u otro medio no efectivo; en efectivo puede quedar sin archivo.
+  </p>
+  <form
+    method="post"
+    enctype="multipart/form-data"
+    action="{{ url_for('treasury_pay',sid=solicitud.id) }}"
+  >
+    <div class="pay-grid">
+      <div class="field">
+        <label>Medio de pago *</label
+        ><select name="medio_pago" required>
+          <option value="">Seleccione...</option>
+          <option>Transferencia</option>
+          <option>Depósito</option>
+          <option>Efectivo</option>
+          <option>Yape</option>
+          <option>Plin</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Banco / entidad</label
+        ><input name="banco" placeholder="Ingrese banco" />
+      </div>
+      <div class="field">
+        <label>Fecha *</label
+        ><input
+          type="date"
+          name="fecha_pago"
+          value="{{ fecha_hoy }}"
+          required
+        />
+      </div>
+      <div class="field">
+        <label>Monto *</label
+        ><input
+          name="monto"
+          type="number"
+          step="0.01"
+          min="0.01"
+          value="{{ '%.2f'|format(solicitud.monto or 0) }}"
+          required
+        />
+      </div>
+      <div class="field">
+        <label>N° operación / referencia</label
+        ><input name="nro_operacion" placeholder="Opcional" />
+      </div>
+    </div>
+    <div class="field topgap">
+      <label
+        >Evidencias del {{ 'pago' if solicitud.origen in ['REQ-Compra','REQ-Cotizacion'] else
+        'reembolso' }} *</label
+      >
+      <div id="evidenceList" class="evidence-list">
+        <div class="evidence-row">
+          <input
+            type="file"
+            name="comprobante_pago"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+          /><button
+            type="button"
+            class="remove-evidence"
+            onclick="removeEvidence(this)"
+            title="Quitar"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+      <button type="button" class="btn topgap" onclick="addEvidence()">
+        <i class="fa-solid fa-plus"></i> Agregar evidencia
+      </button>
+    </div>
+    <div class="td-note">
+      {{ 'Este pago quedará registrado dentro del requerimiento. Cuando existan varios proveedores, cada pago se atiende por separado.' if solicitud.origen in ['REQ-Compra','REQ-Cotizacion'] else
+      'Este reembolso no bloquea el flujo del requerimiento; quedará registrado
+      para control una vez atendido.' }}
+    </div>
+    <button class="btn primary topgap" type="submit">
+      <i class="fa-solid fa-check"></i> {{ 'Registrar pago' if
+      solicitud.origen in ['REQ-Compra','REQ-Cotizacion'] else 'Registrar reembolso' }}
+    </button>
+  </form>
+</div>
+{% endif %} {% if pagos %}
+<div class="td-card">
+  <h2>Evidencias registradas</h2>
+  <p class="sub">Documentos que acreditan la atención de Tesorería.</p>
+  {% for p in pagos %}
+  <div class="paid-file">
+    <span
+      ><strong>{{ p.nombre_original }}</strong> · {{ p.medio_pago or '-' }} · S/
+      {{ '%.2f'|format(p.monto or 0) }}</span
+    ><a
+      class="btn"
+      target="_blank"
+      href="{{ url_for('treasury_payment_file',pid=p.id,mode='view') }}"
+      >Ver</a
+    ><a
+      class="btn"
+      href="{{ url_for('treasury_payment_file',pid=p.id,mode='download') }}"
+      >Descargar</a
+    >
+  </div>
+  {% if not loop.last %}
+  <hr />
+  {% endif %}{% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

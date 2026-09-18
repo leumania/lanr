@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Reembolsos y rendiciones | LANR{% endblock %}
+{% block content %}
+<div class="lanr-module-shell">
+  <div class="lanr-module-head">
+    <div><span class="lanr-eyebrow">GESTIÓN</span><h1>Reembolsos y rendiciones</h1><p>Reembolso: gasto con dinero personal. Rendición: sustento de fondos entregados por la empresa.</p></div>
+    <a class="btn primary" href="{{ url_for('new_reimbursement') }}"><i class="fa-solid fa-plus"></i> Registrar</a>
+  </div>
+  <div class="card"><div class="table-responsive"><table class="nt-table">
+    <thead><tr><th>N°</th><th>Tipo</th><th>Fecha</th><th>Solicitante</th><th>Concepto</th><th>Monto</th><th>Estado</th><th>Sustentos</th><th>Acción</th></tr></thead>
+    <tbody>
+    {% for r in rows %}<tr>
+      <td>{{ r.numero }}</td><td>{{ r.tipo }}</td><td>{{ r.fecha }}</td><td>{{ r.solicitante_nombre }}</td><td>{{ r.concepto }}</td><td>{{ 'US$' if r.moneda=='USD' else 'S/' }} {{ '%.2f'|format(r.monto) }}</td><td><span class="status {{ 'done' if r.estado=='Atendido' else '' }}">{{ r.estado }}</span></td>
+      <td>{% set ns=namespace(n=0) %}{% for f in rr_files if f.reembolso_id==r.id %}{% set ns.n=ns.n+1 %}<a class="btn small" target="_blank" href="{{ url_for('reimbursement_file',fid=f.id) }}"><i class="fa-regular fa-file"></i> {{ f.tipo }}</a>{% endfor %}{% if ns.n==0 %}<span class="muted">—</span>{% endif %}</td>
+      <td>{% if user.role=='Administración' and r.estado=='Pendiente de Administración' %}<form method="post" action="{{ url_for('authorize_reimbursement',rid=r.id) }}"><button class="btn small primary">Autorizar</button></form>{% elif user.role=='Tesorería' and r.estado=='Pendiente de Tesorería' %}<form method="post" enctype="multipart/form-data" action="{{ url_for('attend_reimbursement',rid=r.id) }}"><input type="file" name="evidencia" required accept=".pdf,.jpg,.jpeg,.png,.webp"><button class="btn small primary">Atender</button></form>{% else %}<span class="muted">—</span>{% endif %}</td>
+    </tr>{% else %}<tr><td colspan="9" class="muted">No hay registros.</td></tr>{% endfor %}
+    </tbody>
+  </table></div></div>
+</div>
+{% endblock %}

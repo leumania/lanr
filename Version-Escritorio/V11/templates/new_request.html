@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo trámite | LANR{% endblock %}
+{% block content %}
+<div class="lanr-module-shell">
+  <div class="lanr-module-head">
+    <div>
+      <h1>Nuevo trámite</h1>
+      <p>Seleccione el proceso que va a registrar. Cada trámite tendrá su propia pantalla y flujo.</p>
+    </div>
+  </div>
+
+  <div class="lanr-module-grid">
+    {% if can_create_req %}
+    <a href="{{ url_for('new_requirement') }}" class="lanr-module-card available">
+      <div class="lanr-module-icon"><i class="fa-solid fa-box-open"></i></div>
+      <div class="lanr-module-content"><strong>Requerimiento de materiales</strong><span>Materiales de obra, seguridad y útiles de oficina según su rol.</span></div>
+      <i class="fa-solid fa-arrow-right lanr-module-arrow"></i>
+    </a>
+    {% endif %}
+
+    {% if can_create_sp %}
+    <a href="{{ url_for('new_payment_request') }}" class="lanr-module-card available">
+      <div class="lanr-module-icon"><i class="fa-regular fa-credit-card"></i></div>
+      <div class="lanr-module-content"><strong>Solicitud de pago</strong><span>Registra una solicitud y envíala a la revisión correspondiente.</span></div>
+      <i class="fa-solid fa-arrow-right lanr-module-arrow"></i>
+    </a>
+    {% endif %}
+
+    {% if user.role in ['Gerencia de Obra','Administración','Sistemas'] %}
+    <a href="{{ url_for('new_order') }}" class="lanr-module-card available">
+      <div class="lanr-module-icon"><i class="fa-solid fa-file-signature"></i></div>
+      <div class="lanr-module-content"><strong>Orden</strong><span>Orden de servicio u orden de compra. Registro base funcional.</span></div>
+      <i class="fa-solid fa-arrow-right lanr-module-arrow"></i>
+    </a>
+    {% endif %}
+
+    <a href="{{ url_for('new_reimbursement') }}" class="lanr-module-card available">
+      <div class="lanr-module-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+      <div class="lanr-module-content"><strong>Reembolso / Rendición</strong><span>Gastos con dinero personal o fondos entregados por la empresa.</span></div>
+      <i class="fa-solid fa-arrow-right lanr-module-arrow"></i>
+    </a>
+  </div>
+</div>
+{% endblock %}

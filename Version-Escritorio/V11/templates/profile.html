@@ -1,0 +1,325 @@
+{% extends 'base.html' %} {% block title %} Mi perfil | LANR {% endblock %} {%
+block content %}
+
+<!-- =========================================================
+     CABECERA
+========================================================= -->
+
+<div class="pagehead profile-pagehead">
+  <div>
+    <h1>Mi perfil</h1>
+    <p>Administre su información personal y datos de contacto.</p>
+  </div>
+
+  <!-- ACCIONES SUPERIORES -->
+
+  <div class="profile-top-actions">
+    <button
+      type="button"
+      class="btn primary profile-edit-btn"
+      id="profileEditButton"
+    >
+      <i class="fa-solid fa-pen"></i>
+      Editar perfil
+    </button>
+
+    <div class="profile-edit-actions" id="profileEditActions" hidden>
+      <button type="button" class="btn" id="profileCancelButton">
+        Cancelar
+      </button>
+
+      <button type="submit" class="btn primary" form="profileForm">
+        <i class="fa-solid fa-floppy-disk"></i>
+        Guardar cambios
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     FORMULARIO
+========================================================= -->
+
+<form
+  method="POST"
+  enctype="multipart/form-data"
+  id="profileForm"
+  class="profile-layout"
+  data-has-photo="{{ '1' if user.profile_photo else '0' }}"
+>
+  <!-- =====================================================
+       COLUMNA IZQUIERDA
+  ====================================================== -->
+
+  <div class="profile-side-column">
+    <!-- =================================================
+         IDENTIDAD / FOTO
+    ================================================== -->
+
+    <div class="card profile-identity-card">
+      <div class="profile-photo-wrapper">
+        <div class="profile-photo" id="profilePhotoPreview">
+          {% if user.profile_photo %}
+
+          <img
+            src="{{ url_for(
+              'static',
+              filename='profile_photos/' ~ user.profile_photo
+            ) }}"
+            alt="Foto de perfil"
+          />
+
+          {% else %}
+
+          <span> {{ user.full_name[0]|upper }} </span>
+
+          {% endif %}
+        </div>
+
+        <!-- CÁMARA -->
+
+        <label
+          for="profilePhotoInput"
+          class="profile-photo-button"
+          id="profilePhotoButton"
+          title="Cambiar foto"
+        >
+          <i class="fa-solid fa-camera"></i>
+        </label>
+
+        <input
+          type="file"
+          name="profile_photo"
+          id="profilePhotoInput"
+          accept=".jpg,.jpeg,.png,.webp"
+          hidden
+          disabled
+        />
+
+        <!-- ENVÍA AL BACKEND SI SE DEBE ELIMINAR -->
+
+        <input
+          type="hidden"
+          name="remove_photo"
+          id="removePhotoInput"
+          value="0"
+        />
+      </div>
+
+      <!-- DATOS DE IDENTIDAD -->
+
+      <div class="profile-identity-info">
+        <h2 id="profileDisplayName">{{ user.full_name }}</h2>
+
+        <span class="profile-role"> {{ user.role }} </span>
+
+        <p>{{ user.username }}</p>
+      </div>
+
+      <!-- CONTROLES DE FOTO -->
+
+      <div class="profile-photo-options" id="profilePhotoOptions">
+        <span>
+          <i class="fa-solid fa-circle-info"></i>
+          JPG, JPEG, PNG o WEBP
+        </span>
+
+        <button
+          type="button"
+          class="profile-remove-photo"
+          id="profileRemovePhotoButton"
+        >
+          <i class="fa-regular fa-trash-can"></i>
+          Quitar foto
+        </button>
+      </div>
+    </div>
+
+    <!-- =================================================
+         SEGURIDAD
+    ================================================== -->
+
+    <div class="card profile-security-card">
+      <div class="profile-security-heading">
+        <div class="profile-section-icon">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+
+        <div>
+          <h3>Seguridad</h3>
+
+          <p>Proteja el acceso a su cuenta.</p>
+        </div>
+      </div>
+
+      <div class="profile-security-content">
+        <div>
+          <strong> Contraseña </strong>
+
+          <span> Puede cambiarla cuando lo necesite. </span>
+        </div>
+
+        <a
+          class="btn primary profile-password-button"
+          href="{{ url_for('change_password') }}"
+        >
+          <i class="fa-solid fa-key"></i>
+          Cambiar contraseña
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       COLUMNA DERECHA
+  ====================================================== -->
+
+  <div class="card profile-main-card">
+    <!-- =================================================
+         INFORMACIÓN PERSONAL
+    ================================================== -->
+
+    <div class="profile-section">
+      <div class="profile-section-heading">
+        <div class="profile-section-icon">
+          <i class="fa-regular fa-user"></i>
+        </div>
+
+        <div>
+          <h3>Información personal</h3>
+
+          <p>Estos datos pueden ser actualizados por el usuario.</p>
+        </div>
+      </div>
+
+      <div class="formgrid profile-formgrid">
+        <!-- NOMBRES -->
+
+        <div class="field full">
+          <label for="profileFullName">
+            Nombres y apellidos
+            <span class="required">*</span>
+          </label>
+
+          <input
+            type="text"
+            id="profileFullName"
+            name="full_name"
+            value="{{ user.full_name }}"
+            class="profile-editable no-uppercase"
+            autocomplete="name"
+            placeholder="Ingrese nombres y apellidos"
+            disabled
+            required
+          />
+        </div>
+
+        <!-- CORREO -->
+
+        <div class="field">
+          <label for="profileEmail"> Correo electrónico </label>
+
+          <input
+            type="email"
+            id="profileEmail"
+            name="email"
+            value="{{ user.email or '' }}"
+            class="profile-editable no-uppercase"
+            autocomplete="email"
+            placeholder="Ingrese su correo electrónico"
+            disabled
+          />
+
+          <small class="field-help">
+            Opcional, pero recomendado para recuperar su contraseña.
+          </small>
+        </div>
+
+        <!-- TELÉFONO -->
+
+        <div class="field">
+          <label for="profilePhone"> Teléfono </label>
+
+          <input
+            type="tel"
+            id="profilePhone"
+            name="phone"
+            value="{{ user.phone or '' }}"
+            class="profile-editable no-uppercase numbers-only"
+            autocomplete="tel"
+            inputmode="numeric"
+            maxlength="15"
+            placeholder="Ingrese su número de teléfono"
+            disabled
+          />
+
+          <small class="field-help">
+            Opcional. Dato de contacto interno.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================
+         DATOS DE ACCESO
+    ================================================== -->
+
+    <div class="profile-section profile-access-section">
+      <div class="profile-section-heading">
+        <div class="profile-section-icon">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+
+        <div>
+          <h3>Datos de acceso</h3>
+
+          <p>Estos datos son administrados por el Área de Sistemas.</p>
+        </div>
+      </div>
+
+      <div class="formgrid profile-formgrid">
+        <!-- USUARIO -->
+
+        <div class="field">
+          <label> Usuario </label>
+
+          <input
+            type="text"
+            value="{{ user.username }}"
+            class="readonly-field no-uppercase"
+            readonly
+            tabindex="-1"
+          />
+
+          <small class="field-help">
+            No puede ser modificado desde su perfil.
+          </small>
+        </div>
+
+        <!-- ROL -->
+
+        <div class="field">
+          <label> Rol / Área </label>
+
+          <input
+            type="text"
+            value="{{ user.role }}"
+            class="readonly-field no-uppercase"
+            readonly
+            tabindex="-1"
+          />
+
+          <small class="field-help"> Asignado por el Área de Sistemas. </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
+
+
+
+{% endblock %}
