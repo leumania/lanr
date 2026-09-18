@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Models\Approval;
+use App\Models\Reembolso;
 use App\Models\SolicitudTesoreria;
 use App\Models\Tramite;
 use Livewire\Component;
@@ -38,7 +39,7 @@ class Home extends Component
             ],
             $user->hasRole('Administración') => [
                 'SP por revisar',
-                $tramites()->where('tipo', 'SP')->where('estado', 'Pendiente asignación de pago')->count(),
+                $tramites()->where('tipo', 'SP')->where('estado', 'Pendiente revisión de Administración')->count(),
             ],
             default => [
                 'En oficina / logística',
@@ -81,19 +82,25 @@ class Home extends Component
 
         if ($user->hasRole('Logística')) {
             $pendientesLogistica = $tramites()
-                ->with(['creador', 'gestionLogistica'])
+                ->with(['creador', 'gestionLogistica', 'cotizaciones'])
                 ->where('tipo', 'REQ')
-                ->whereIn('estado', ['Aprobado', 'Recibido por Logística', 'En gestión de compra'])
+                ->whereIn('estado', ['Aprobado', 'Recibido por Logística', 'Cotizaciones en gestión', 'En gestión de compra'])
                 ->latest('id')
                 ->get()
                 ->map(function (Tramite $t) {
                     $g = $t->gestionLogistica;
+                    $enviadaAAdministracion = $t->cotizaciones->contains(fn ($cotizacion) => $cotizacion->estado === 'Enviada a Administración');
 
+                    // Réplica de los 6 estados granulares de Logística del prototipo V11,
+                    // derivados de combinaciones de campos existentes (sin agregar campos nuevos).
                     $t->pendiente_de = match (true) {
                         $t->estado === 'Aprobado' => 'Recepcionar',
-                        $t->estado === 'Recibido por Logística' => 'Cotización / compra',
-                        $t->estado === 'En gestión de compra' && blank($g?->estado_pago) => 'Pago',
-                        in_array($g?->estado_pago, ['Pagado por Logística', 'Pagado por Tesorería']) => 'Guía y envío a obra',
+                        $t->estado === 'Recibido por Logística' => 'Cotizaciones',
+                        $t->estado === 'Cotizaciones en gestión' && $enviadaAAdministracion => 'Autorización de Sara',
+                        $t->estado === 'Cotizaciones en gestión' => 'Cotizaciones',
+                        $t->estado === 'En gestión de compra' && blank($g?->estado_pago) => 'Pago por proveedor',
+                        $t->estado === 'En gestión de compra' && $g?->comprobante_pendiente => 'Comprobantes de compra',
+                        $t->estado === 'En gestión de compra' && in_array($g?->estado_pago, ['Pagado por Logística', 'Pagado por Tesorería']) => 'Despacho a obra',
                         default => 'Revisar',
                     };
 
@@ -108,7 +115,7 @@ class Home extends Component
             $spPendientesAsignacion = $tramites()
                 ->with('creador')
                 ->where('tipo', 'SP')
-                ->where('estado', 'Pendiente asignación de pago')
+                ->where('estado', 'Pendiente revisión de Administración')
                 ->latest('id')
                 ->get();
 
@@ -122,6 +129,7 @@ class Home extends Component
         }
 
         $spTesoreria = collect();
+        $reembolsosPendientes = collect();
 
         if ($user->hasRole('Tesorería')) {
             $spTesoreria = $tramites()
@@ -129,6 +137,12 @@ class Home extends Component
                 ->where('tipo', 'SP')
                 ->where('estado', 'Asignada a Tesorería')
                 ->latest('id')
+                ->get();
+
+            $reembolsosPendientes = Reembolso::where('obra_id', $obraId)
+                ->where('estado', 'Autorizado')
+                ->with('solicitante')
+                ->latest()
                 ->get();
         }
 
@@ -144,6 +158,7 @@ class Home extends Component
             'spPendientesAsignacion' => $spPendientesAsignacion,
             'spPendientesConformidad' => $spPendientesConformidad,
             'spTesoreria' => $spTesoreria,
+            'reembolsosPendientes' => $reembolsosPendientes,
         ]);
     }
 }

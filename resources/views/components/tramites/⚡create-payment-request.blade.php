@@ -8,6 +8,7 @@ use App\Models\Tramite;
 use App\Models\UnidadCatalogo;
 use App\Models\User;
 use App\Services\CodigoGeneratorService;
+use App\Support\TramiteRoles;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -61,7 +62,7 @@ new class extends Component
 
     public function mount(): void
     {
-        abort_unless(auth()->user()->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento', 'Contabilidad', 'Administración']), 403);
+        abort_unless(auth()->user()->hasAnyRole(TramiteRoles::PAYMENT_REQUEST_CREATOR_ROLES), 403);
         $this->fecha = now()->format('Y-m-d');
         $this->anioActual = (int) now()->year;
         $this->obra_id = auth()->user()->obra_activa_id;
@@ -221,8 +222,7 @@ new class extends Component
         $numero = "{$this->anioActual}-{$this->numeroSecuencial}";
 
         if (Tramite::where('obra_id', $this->obra_id)->where('tipo', 'SP')->where('numero', $numero)->exists()) {
-            $this->numeroSecuencial = $this->siguienteNumero();
-            $this->addError('numeroSecuencial', "El número {$numero} ya fue registrado por otra solicitud. Se asignó el siguiente disponible ({$this->anioActual}-{$this->numeroSecuencial}); intente guardar de nuevo.");
+            $this->addError('numeroSecuencial', "La solicitud de pago N.° {$numero} ya existe. Modifique el correlativo e inténtelo nuevamente.");
 
             return;
         }
@@ -235,10 +235,18 @@ new class extends Component
 
         $obra = \App\Models\Obra::findOrFail($this->obra_id);
 
-        $aprobadores = [
-            'Logística' => User::role('Logística')->activeAssignedToObra($obra->id)->first(),
-            'Administración' => User::role('Administración')->activeAssignedToObra($obra->id)->first(),
-        ];
+        // El V°B° requerido depende del rol de quien crea la SP: si es Gerencia de
+        // Obra o Control y Planeamiento, se piden V°B° cruzados de ambos roles;
+        // para cualquier otro creador, basta el V°B° de Gerencia de Obra.
+        // Logística y Administración no participan como aprobadores de V°B° aquí.
+        $rolesAprobadores = auth()->user()->hasAnyRole(['Gerencia de Obra', 'Control y Planeamiento'])
+            ? ['Gerencia de Obra', 'Control y Planeamiento']
+            : ['Gerencia de Obra'];
+
+        $aprobadores = [];
+        foreach ($rolesAprobadores as $rol) {
+            $aprobadores[$rol] = User::role($rol)->activeAssignedToObra($obra->id)->first();
+        }
 
         foreach ($aprobadores as $rol => $usuario) {
             if (! $usuario) {
@@ -433,14 +441,14 @@ new class extends Component
                             </span>
                             <span class="flex items-center px-1 text-zinc-300">-</span>
                             <input
-                                type="text"
+                                type="number"
+                                min="1"
+                                step="1"
                                 wire:model="numeroSecuencial"
-                                readonly
-                                tabindex="-1"
-                                class="min-w-0 flex-1 cursor-not-allowed border-0 bg-transparent px-3 py-2 text-sm font-semibold text-zinc-600 focus:ring-0 dark:text-zinc-300"
+                                class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm font-semibold text-zinc-600 focus:ring-0 dark:text-zinc-300"
                             />
                         </div>
-                        <flux:text class="mt-1 text-xs text-zinc-400">Se asigna automáticamente en base a la última solicitud registrada en esta obra.</flux:text>
+                        <flux:text class="mt-1 text-xs text-zinc-400">Se sugiere automáticamente en base a la última solicitud registrada en esta obra. Puede modificarlo si ya existe.</flux:text>
                         @error('numeroSecuencial') <flux:text class="mt-1 text-sm text-red-500">{{ $message }}</flux:text> @enderror
                     </div>
 

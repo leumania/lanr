@@ -163,7 +163,7 @@
 
                     <div class="mt-4 text-xs font-bold tracking-wide text-zinc-400 uppercase">Requerimientos y solicitudes de pago</div>
                     <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                        @foreach ([['Pendiente de aprobación', 'Faltan vistos buenos asignados.'], ['Aprobado', 'El requerimiento puede pasar a Logística.'], ['Recibido por Logística', 'Logística confirmó la recepción.'], ['En gestión de compra', 'La compra fue registrada.'], ['Enviado a obra', 'La compra está pagada y fue despachada.'], ['Pendiente asignación de pago', 'Gerencia debe asignar el responsable.'], ['Pagada pendiente conformidad GG', 'El pago existe y espera revisión final.'], ['Cerrado', 'El flujo terminó correctamente.']] as [$state, $description])
+                        @foreach ([['Pendiente de aprobación', 'Faltan vistos buenos asignados.'], ['Aprobado', 'El requerimiento puede pasar a Logística.'], ['Recibido por Logística', 'Logística confirmó la recepción.'], ['En gestión de compra', 'La compra fue registrada.'], ['Enviado a obra', 'La compra está pagada y fue despachada.'], ['Pendiente revisión de Administración', 'Administración debe revisar y asignar el responsable del pago.'], ['Pagada pendiente conformidad GG', 'El pago existe y espera revisión final.'], ['Cerrado', 'El flujo terminó correctamente.']] as [$state, $description])
                             <div class="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
                                 <div class="font-medium">{{ $state }}</div>
                                 <div class="text-sm text-zinc-500">{{ $description }}</div>

@@ -19,15 +19,34 @@ new class extends Component
     #[Locked]
     public Tramite $tramite;
     public array $detalle_compra = [];
+    public array $detalle_despacho = [];
 
     public function mount(Tramite $tramite): void
     {
         $this->tramite = $tramite;
-        $this->tramite->loadMissing('items.imagenes');
+        $this->tramite->loadMissing(['items.imagenes', 'despachos.detalles']);
         $this->detalle_compra = $this->tramite->items
             ->filter(fn ($item) => (float) $item->comprar > 0)
             ->mapWithKeys(fn ($item) => [$item->id => ['cantidad' => 0, 'observacion' => '']])
             ->all();
+        $this->detalle_despacho = $this->tramite->items
+            ->filter(fn ($item) => (float) $item->comprar > 0)
+            ->mapWithKeys(fn ($item) => [$item->id => 0])
+            ->all();
+    }
+
+    protected function cantidadCompradaPorItem(int $itemId): float
+    {
+        return (float) \App\Models\CompraDetalle::where('item_id', $itemId)
+            ->whereHas('compra', fn ($q) => $q->where('tramite_id', $this->tramite->id))
+            ->sum('cantidad_comprada');
+    }
+
+    protected function cantidadDespachadaPorItem(int $itemId): float
+    {
+        return (float) \App\Models\DespachoDetalle::where('item_id', $itemId)
+            ->whereHas('despacho', fn ($q) => $q->where('tramite_id', $this->tramite->id))
+            ->sum('cantidad_despachada');
     }
 
     protected function notificarRoles(array $roles, string $titulo, string $mensaje, string $tipo = 'informativa'): void
@@ -132,16 +151,16 @@ new class extends Component
                         ]);
                     }
                 } elseif ($tramite->tipo === 'SP') {
-                    $tramite->update(['estado' => 'Pendiente asignación de pago']);
+                    $tramite->update(['estado' => 'Pendiente revisión de Administración']);
 
-                    $gerenteGeneral = User::role('Gerencia General')->first();
+                    $administracion = User::role('Administración')->activeAssignedToObra($tramite->obra_id)->first();
 
-                    if ($gerenteGeneral) {
+                    if ($administracion) {
                         Notificacion::create([
-                            'usuario_id' => $gerenteGeneral->id,
+                            'usuario_id' => $administracion->id,
                             'tramite_id' => $tramite->id,
-                            'titulo' => 'Solicitud lista para asignar pago',
-                            'mensaje' => "La solicitud {$tramite->tracking} completó los V°B° de Administración y Logística. Debes revisar el expediente y decidir quién realizará el pago.",
+                            'titulo' => 'Solicitud pendiente de Administración',
+                            'mensaje' => "La solicitud {$tramite->tracking} completó el V°B° de obra requerido. Corresponde continuar con la revisión de Administración.",
                             'tipo' => 'accion',
                         ]);
                     }
@@ -186,6 +205,7 @@ new class extends Component
         'monto' => 0,
         'pendiente_regularizacion' => false,
     ];
+    public ?int $compra_proveedor_id = null;
     public array $archivos_compra = [];
 
     public function registrarCompra(): void
@@ -197,6 +217,7 @@ new class extends Component
             'compra.fecha_compra' => 'required|date',
             'compra.tipo_comprobante' => 'required|in:Factura,Boleta,Otro',
             'compra.monto' => 'required|numeric|min:0.01',
+            'compra_proveedor_id' => 'nullable|exists:proveedores,id',
             'detalle_compra' => 'array',
             'detalle_compra.*.cantidad' => 'numeric|min:0',
         ], [
@@ -262,6 +283,7 @@ new class extends Component
 
             $compraDetallada = \App\Models\CompraLogistica::create([
                 'tramite_id' => $this->tramite->id,
+                'proveedor_id' => $this->compra_proveedor_id,
                 'fecha_compra' => $this->compra['fecha_compra'],
                 'tipo_comprobante' => $this->compra['tipo_comprobante'],
                 'nro_comprobante' => $this->compra['nro_comprobante'],
@@ -318,12 +340,41 @@ new class extends Component
     public function addComprobanteDefinitivo(): void
     {
         $this->comprobantes_definitivos[] = [
+            'solicitud_tesoreria_id' => null,
             'fecha_compra' => now()->format('Y-m-d'),
             'tipo_comprobante' => 'Factura',
             'nro_comprobante' => '',
             'monto' => 0,
             'archivo' => null,
+            'items' => $this->tramite->items
+                ->filter(fn ($item) => (float) $item->comprar > 0)
+                ->mapWithKeys(fn ($item) => [$item->id => 0])
+                ->all(),
         ];
+    }
+
+    /**
+     * Pagos de Tesorería (por proveedor) ya atendidos, contra los cuales se puede
+     * sustentar un comprobante de compra y validar que no se exceda lo pagado.
+     */
+    public function getSolicitudesParaComprobanteProperty()
+    {
+        return $this->tramite->solicitudesTesoreria()
+            ->whereIn('origen', ['REQ-Compra', 'REQ-Cotizacion'])
+            ->where('estado', 'Atendida')
+            ->with('proveedor')
+            ->get()
+            ->map(function ($solicitud) {
+                $comprobado = (float) \App\Models\CompraLogistica::where('solicitud_tesoreria_id', $solicitud->id)->sum('monto');
+
+                return [
+                    'id' => $solicitud->id,
+                    'proveedor' => $solicitud->proveedor?->nombre ?? 'Caja Logística / directo',
+                    'monto' => (float) $solicitud->monto,
+                    'comprobado' => $comprobado,
+                    'saldo' => max((float) $solicitud->monto - $comprobado, 0),
+                ];
+            });
     }
 
     public function registrarComprobantesDefinitivos(): void
@@ -333,20 +384,102 @@ new class extends Component
 
         $this->validate([
             'comprobantes_definitivos' => 'required|array|min:1',
+            'comprobantes_definitivos.*.solicitud_tesoreria_id' => 'nullable|integer',
             'comprobantes_definitivos.*.fecha_compra' => 'required|date',
             'comprobantes_definitivos.*.tipo_comprobante' => 'required|in:Factura,Boleta,Otro',
             'comprobantes_definitivos.*.nro_comprobante' => 'required|string|max:100',
             'comprobantes_definitivos.*.monto' => 'required|numeric|min:0.01',
             'comprobantes_definitivos.*.archivo' => 'required|file|mimes:pdf,jpg,jpeg,png,webp,xml|max:10240',
+            'comprobantes_definitivos.*.items.*' => 'nullable|numeric|min:0',
         ]);
 
-        DB::transaction(function (): void {
+        // Solicitudes de Tesorería (por proveedor) ya atendidas para este trámite: sirven
+        // para validar que la suma de comprobantes no exceda lo pagado a ese proveedor.
+        $solicitudesAtendidas = $this->tramite->solicitudesTesoreria()
+            ->whereIn('origen', ['REQ-Compra', 'REQ-Cotizacion'])
+            ->where('estado', 'Atendida')
+            ->get()
+            ->keyBy('id');
+
+        $itemsPorId = $this->tramite->items->keyBy('id');
+
+        foreach ($this->comprobantes_definitivos as $index => $comprobante) {
+            $solicitud = ! empty($comprobante['solicitud_tesoreria_id'])
+                ? $solicitudesAtendidas->get((int) $comprobante['solicitud_tesoreria_id'])
+                : null;
+
+            if (! empty($comprobante['solicitud_tesoreria_id']) && ! $solicitud) {
+                $this->addError("comprobantes_definitivos.{$index}.solicitud_tesoreria_id", 'Selecciona un pago de Tesorería válido para este comprobante.');
+
+                return;
+            }
+
+            if ($solicitud) {
+                $yaComprobado = (float) \App\Models\CompraLogistica::where('solicitud_tesoreria_id', $solicitud->id)->sum('monto');
+                if ($yaComprobado + (float) $comprobante['monto'] > (float) $solicitud->monto + 0.01) {
+                    $this->addError("comprobantes_definitivos.{$index}.monto", 'El total de comprobantes no puede superar el monto pagado a este proveedor: S/ '.number_format($solicitud->monto, 2).'.');
+
+                    return;
+                }
+            }
+
+            // Si el pago viene de una autorización de compra por proveedor, la cantidad
+            // comprada por ítem no puede exceder lo autorizado (y pagado) para ese proveedor.
+            $autorizadoPorItem = null;
+            if ($solicitud && $solicitud->autorizacion_id && $solicitud->proveedor_id) {
+                $autorizadoPorItem = \App\Models\AutorizacionItem::where('autorizacion_id', $solicitud->autorizacion_id)
+                    ->where('proveedor_id', $solicitud->proveedor_id)
+                    ->pluck('cantidad', 'item_id');
+            }
+
+            foreach (($comprobante['items'] ?? []) as $itemId => $cantidad) {
+                $cantidad = (float) ($cantidad ?? 0);
+                if ($cantidad <= 0) {
+                    continue;
+                }
+
+                $item = $itemsPorId->get((int) $itemId);
+                if (! $item) {
+                    continue;
+                }
+
+                if ($autorizadoPorItem !== null) {
+                    $autorizado = (float) ($autorizadoPorItem[$itemId] ?? 0);
+                    $yaComprado = (float) \App\Models\CompraDetalle::where('item_id', $itemId)
+                        ->whereHas('compra', fn ($q) => $q->where('solicitud_tesoreria_id', $solicitud->id))
+                        ->sum('cantidad_comprada');
+
+                    if ($yaComprado + $cantidad > $autorizado + 0.01) {
+                        $this->addError("comprobantes_definitivos.{$index}.items.{$itemId}", "La cantidad comprada de \"{$item->descripcion}\" supera lo autorizado y pagado para este proveedor.");
+
+                        return;
+                    }
+                } else {
+                    $yaComprado = (float) \App\Models\CompraDetalle::where('item_id', $itemId)
+                        ->whereHas('compra', fn ($q) => $q->where('tramite_id', $this->tramite->id))
+                        ->sum('cantidad_comprada');
+
+                    if ($yaComprado + $cantidad > (float) $item->comprar + 0.01) {
+                        $this->addError("comprobantes_definitivos.{$index}.items.{$itemId}", "La cantidad comprada de \"{$item->descripcion}\" supera lo pendiente de compra.");
+
+                        return;
+                    }
+                }
+            }
+        }
+
+        DB::transaction(function () use ($solicitudesAtendidas): void {
             foreach ($this->comprobantes_definitivos as $comprobante) {
                 $archivo = $comprobante['archivo'];
                 $ruta = $archivo->store('archivos-logistica', 'public');
+                $solicitud = ! empty($comprobante['solicitud_tesoreria_id'])
+                    ? $solicitudesAtendidas->get((int) $comprobante['solicitud_tesoreria_id'])
+                    : null;
 
                 $compra = \App\Models\CompraLogistica::create([
                     'tramite_id' => $this->tramite->id,
+                    'proveedor_id' => $solicitud?->proveedor_id,
+                    'solicitud_tesoreria_id' => $solicitud?->id,
                     'fecha_compra' => $comprobante['fecha_compra'],
                     'tipo_comprobante' => $comprobante['tipo_comprobante'],
                     'nro_comprobante' => $comprobante['nro_comprobante'],
@@ -355,6 +488,16 @@ new class extends Component
                     'nombre_archivo' => $ruta,
                     'creado_por' => auth()->id(),
                 ]);
+
+                foreach (($comprobante['items'] ?? []) as $itemId => $cantidad) {
+                    $cantidad = (float) ($cantidad ?? 0);
+                    if ($cantidad > 0) {
+                        $compra->detalles()->create([
+                            'item_id' => $itemId,
+                            'cantidad_comprada' => $cantidad,
+                        ]);
+                    }
+                }
 
                 \App\Models\ArchivoLogistica::create([
                     'tramite_id' => $this->tramite->id,
@@ -662,6 +805,23 @@ new class extends Component
     public array $evidencias_envio = [];
     public array $comprobantes_transporte = [];
 
+    /** Ítems con saldo pendiente de despacho (ya comprados pero aún no enviados por completo). */
+    public function getItemsPendientesDespachoProperty()
+    {
+        return $this->tramite->items->where('comprar', '>', 0)->map(function ($item) {
+            $comprado = $this->cantidadCompradaPorItem($item->id);
+            $despachado = $this->cantidadDespachadaPorItem($item->id);
+
+            return [
+                'id' => $item->id,
+                'descripcion' => $item->descripcion,
+                'comprado' => $comprado,
+                'despachado' => $despachado,
+                'pendiente' => max($comprado - $despachado, 0),
+            ];
+        })->filter(fn ($row) => $row['pendiente'] > 0.001)->values();
+    }
+
     public function enviarAObra(): void
     {
         $user = auth()->user();
@@ -689,6 +849,8 @@ new class extends Component
             'evidencias_envio.*' => 'file|image|mimes:jpg,jpeg,png,webp|max:10240',
             'comprobantes_transporte' => 'array|max:10',
             'comprobantes_transporte.*' => 'file|mimes:pdf,jpg,jpeg,png,webp,xml|max:10240',
+            'detalle_despacho' => 'array',
+            'detalle_despacho.*' => 'nullable|numeric|min:0',
         ], [
             'archivos_guia.required' => 'Adjunta la guía de remisión o marca la opción "pendiente de regularización".',
             'evidencias_envio.required' => 'Debes adjuntar al menos una evidencia fotográfica del envío.',
@@ -701,10 +863,65 @@ new class extends Component
             return;
         }
 
-        DB::transaction(function () use ($user, $gestion, $guiaAdjunta) {
-            $gestion->update([
+        // Ítems que tienen saldo comprado pendiente de despacho. Si el trámite no tiene
+        // ítems (o ya no queda saldo comprado por despachar), se conserva el comportamiento
+        // histórico de envío único, sin exigir cantidades por ítem.
+        $pendientes = [];
+        foreach ($this->tramite->items->where('comprar', '>', 0) as $item) {
+            $comprado = $this->cantidadCompradaPorItem($item->id);
+            $despachado = $this->cantidadDespachadaPorItem($item->id);
+            $pendiente = max($comprado - $despachado, 0);
+            if ($pendiente > 0.001) {
+                $pendientes[$item->id] = ['pendiente' => $pendiente, 'descripcion' => $item->descripcion];
+            }
+        }
+
+        $detalles = [];
+        if ($pendientes !== []) {
+            foreach ($pendientes as $itemId => $info) {
+                $cantidad = (float) ($this->detalle_despacho[$itemId] ?? 0);
+                if ($cantidad <= 0) {
+                    continue;
+                }
+
+                if ($cantidad > $info['pendiente'] + 0.001) {
+                    $this->addError("detalle_despacho.{$itemId}", "La cantidad a despachar de \"{$info['descripcion']}\" supera lo comprado pendiente de envío.");
+
+                    return;
+                }
+
+                $detalles[$itemId] = $cantidad;
+            }
+
+            if ($detalles === []) {
+                $this->addError('detalle_despacho', 'Registra al menos una cantidad a despachar.');
+
+                return;
+            }
+        }
+
+        $completo = false;
+
+        DB::transaction(function () use ($user, $gestion, $guiaAdjunta, $detalles, &$completo) {
+            $despacho = \App\Models\Despacho::create([
+                'tramite_id' => $this->tramite->id,
+                'medio_envio' => $this->envio['medio_envio'],
+                'responsable_transporte' => $this->envio['responsable_transporte'] ?: null,
+                'costo_envio' => $this->envio['costo_envio'] !== '' ? $this->envio['costo_envio'] : null,
+                'observacion' => $this->envio['observacion_envio'] ?: null,
                 'guia_numero' => $guiaAdjunta ? $this->envio['guia_numero'] : null,
                 'guia_fecha' => $guiaAdjunta ? ($this->envio['guia_fecha'] ?: null) : null,
+                'guia_pendiente' => ! $guiaAdjunta,
+                'creado_por' => $user->id,
+            ]);
+
+            foreach ($detalles as $itemId => $cantidad) {
+                $despacho->detalles()->create(['item_id' => $itemId, 'cantidad_despachada' => $cantidad]);
+            }
+
+            $gestion->update([
+                'guia_numero' => $guiaAdjunta ? $this->envio['guia_numero'] : $gestion->guia_numero,
+                'guia_fecha' => $guiaAdjunta ? ($this->envio['guia_fecha'] ?: null) : $gestion->guia_fecha,
                 'guia_pendiente' => ! $guiaAdjunta,
                 'medio_envio' => $this->envio['medio_envio'],
                 'responsable_transporte' => $this->envio['responsable_transporte'] ?: null,
@@ -741,40 +958,59 @@ new class extends Component
             }
 
             if (! $guiaAdjunta) {
-                Regularizacion::create([
-                    'tramite_id' => $this->tramite->id,
-                    'responsable_id' => $user->id,
-                    'tipo' => 'Guía de remisión',
-                    'descripcion' => 'Adjuntar la guía de remisión pendiente del envío a obra.',
-                    'estado' => 'Pendiente',
-                    'fecha_creacion' => now(),
-                ]);
+                Regularizacion::firstOrCreate(
+                    ['tramite_id' => $this->tramite->id, 'tipo' => 'Guía de remisión', 'estado' => 'Pendiente'],
+                    [
+                        'responsable_id' => $user->id,
+                        'descripcion' => 'Adjuntar la guía de remisión pendiente del envío a obra.',
+                        'fecha_creacion' => now(),
+                    ]
+                );
             }
 
-            $this->tramite->update(['estado' => 'Enviado a obra']);
+            // El trámite solo se marca como enviado a obra cuando TODOS los ítems requeridos
+            // ya quedaron completamente despachados (soporta despachos parciales por proveedor).
+            $completo = true;
+            foreach ($this->tramite->items->where('comprar', '>', 0) as $item) {
+                if ($this->cantidadDespachadaPorItem($item->id) + 0.001 < (float) $item->comprar) {
+                    $completo = false;
+                    break;
+                }
+            }
+
+            if ($completo) {
+                $this->tramite->update(['estado' => 'Enviado a obra']);
+            }
 
             History::create([
                 'tramite_id' => $this->tramite->id,
                 'usuario_id' => $user->id,
-                'accion' => 'Requerimiento enviado a obra vía '.$this->envio['medio_envio'],
+                'accion' => ($completo ? 'Requerimiento enviado a obra' : 'Despacho parcial registrado').' vía '.$this->envio['medio_envio'],
             ]);
 
             $this->notificarRoles(
                 ['Gerencia de Obra', 'Control y Planeamiento'],
-                'Requerimiento enviado a obra',
-                "El requerimiento {$this->tramite->tracking} fue despachado y está en camino. Confirma la recepción cuando llegue.",
+                $completo ? 'Requerimiento enviado a obra' : 'Despacho parcial enviado a obra',
+                $completo
+                    ? "El requerimiento {$this->tramite->tracking} fue despachado y está en camino. Confirma la recepción cuando llegue."
+                    : "Se registró un despacho parcial del requerimiento {$this->tramite->tracking}. Aún quedan cantidades pendientes de envío.",
                 'accion'
             );
         });
 
-        session()->flash('status', 'Envío a obra registrado correctamente.');
+        $this->detalle_despacho = $this->tramite->items
+            ->filter(fn ($item) => (float) $item->comprar > 0)
+            ->mapWithKeys(fn ($item) => [$item->id => 0])
+            ->all();
+
+        session()->flash('status', $completo ? 'Envío a obra registrado correctamente.' : 'Despacho parcial registrado correctamente. Aún quedan cantidades pendientes.');
         $this->refrescar();
     }
 
     protected function refrescar(): void
     {
         $this->tramite->refresh();
-        $this->tramite->load(['approvals.usuario', 'history.usuario', 'gestionLogistica', 'gestionSp', 'attachments', 'items.imagenes', 'archivosLogistica', 'regularizaciones.responsable', 'solicitudesTesoreria.pagos']);
+        $this->tramite->load(['approvals.usuario', 'history.usuario', 'gestionLogistica', 'gestionSp', 'attachments', 'items.imagenes', 'archivosLogistica', 'regularizaciones.responsable', 'solicitudesTesoreria.pagos', 'despachos.detalles.item']);
     }
 
         public function recibirEnObra(): void
@@ -808,8 +1044,8 @@ new class extends Component
     public function asignarPagoSp(): void
     {
         $user = auth()->user();
-        abort_unless($user->hasRole('Gerencia General'), 403);
-        abort_unless($this->tramite->tipo === 'SP' && $this->tramite->estado === 'Pendiente asignación de pago', 400);
+        abort_unless($user->hasRole('Administración'), 403);
+        abort_unless($this->tramite->tipo === 'SP' && $this->tramite->estado === 'Pendiente revisión de Administración', 400);
 
         DB::transaction(function () use ($user) {
             \App\Models\GestionSp::updateOrCreate(
@@ -979,7 +1215,7 @@ new class extends Component
         return match ($estado) {
             'Pendiente de aprobación' => 'yellow',
             'Aprobado', 'En oficina', 'Cotización', 'Comprado' => 'blue',
-            'Pendiente asignación de pago' => 'purple',
+            'Pendiente revisión de Administración' => 'purple',
             'Enviado a obra' => 'indigo',
             'Cerrado' => 'green',
             default => 'zinc',
@@ -1181,6 +1417,12 @@ new class extends Component
                     </flux:select>
                     <flux:input label="N° de comprobante" wire:model="compra.nro_comprobante" />
                     <flux:input type="number" step="0.01" label="Monto (S/)" wire:model="compra.monto" />
+                    <flux:select label="Proveedor (opcional)" wire:model="compra_proveedor_id">
+                        <flux:select.option value="">Sin proveedor</flux:select.option>
+                        @foreach (\App\Models\Proveedor::where('active', true)->orderBy('nombre')->get() as $proveedorCompra)
+                            <flux:select.option value="{{ $proveedorCompra->id }}">{{ $proveedorCompra->nombre }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
                 </div>
                 <div class="space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
                     <flux:heading size="sm">Detalle de cantidades compradas</flux:heading>
@@ -1209,15 +1451,50 @@ new class extends Component
                 </flux:text>
 
                 @if ($tramite->gestionLogistica->estado_pago && auth()->user()->hasRole('Logística'))
+                    @if ($this->solicitudesParaComprobante->isNotEmpty())
+                        <div class="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-700">
+                            <flux:heading size="sm" class="mb-2">Pagos por proveedor</flux:heading>
+                            @foreach ($this->solicitudesParaComprobante as $solicitudPago)
+                                <div class="flex flex-wrap justify-between gap-2 border-b border-dashed border-zinc-200 py-1 last:border-0 dark:border-zinc-700">
+                                    <span>{{ $solicitudPago['proveedor'] }}</span>
+                                    <span>Pagado S/ {{ number_format($solicitudPago['monto'], 2) }} · Comprobado S/ {{ number_format($solicitudPago['comprobado'], 2) }} · Saldo S/ {{ number_format($solicitudPago['saldo'], 2) }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                     <form wire:submit="registrarComprobantesDefinitivos" class="space-y-3 border-t border-zinc-200 pt-3 dark:border-zinc-700">
                         <div class="flex items-center justify-between"><flux:heading size="sm">Comprobantes definitivos</flux:heading><flux:button type="button" size="sm" icon="plus" wire:click="addComprobanteDefinitivo">Agregar comprobante</flux:button></div>
                         @foreach ($comprobantes_definitivos as $index => $comprobante)
-                            <div class="grid gap-3 rounded border border-zinc-200 p-3 sm:grid-cols-2 dark:border-zinc-700">
-                                <flux:input type="date" label="Fecha" wire:model="comprobantes_definitivos.{{ $index }}.fecha_compra" />
-                                <flux:select label="Tipo" wire:model="comprobantes_definitivos.{{ $index }}.tipo_comprobante"><flux:select.option value="Factura">Factura</flux:select.option><flux:select.option value="Boleta">Boleta</flux:select.option><flux:select.option value="Otro">Otro</flux:select.option></flux:select>
-                                <flux:input label="Número" wire:model="comprobantes_definitivos.{{ $index }}.nro_comprobante" />
-                                <flux:input type="number" step="0.01" label="Monto" wire:model="comprobantes_definitivos.{{ $index }}.monto" />
-                                <div class="sm:col-span-2"><flux:label>Evidencia</flux:label><input type="file" wire:model="comprobantes_definitivos.{{ $index }}.archivo" accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" /></div>
+                            <div class="space-y-3 rounded border border-zinc-200 p-3 dark:border-zinc-700">
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    @if ($this->solicitudesParaComprobante->isNotEmpty())
+                                        <flux:select label="Proveedor / pago relacionado" wire:model="comprobantes_definitivos.{{ $index }}.solicitud_tesoreria_id">
+                                            <flux:select.option value="">Sin proveedor (compra directa)</flux:select.option>
+                                            @foreach ($this->solicitudesParaComprobante as $solicitudPago)
+                                                <flux:select.option value="{{ $solicitudPago['id'] }}">{{ $solicitudPago['proveedor'] }} · Saldo S/ {{ number_format($solicitudPago['saldo'], 2) }}</flux:select.option>
+                                            @endforeach
+                                        </flux:select>
+                                        @error("comprobantes_definitivos.{$index}.solicitud_tesoreria_id") <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror
+                                    @endif
+                                    <flux:input type="date" label="Fecha" wire:model="comprobantes_definitivos.{{ $index }}.fecha_compra" />
+                                    <flux:select label="Tipo" wire:model="comprobantes_definitivos.{{ $index }}.tipo_comprobante"><flux:select.option value="Factura">Factura</flux:select.option><flux:select.option value="Boleta">Boleta</flux:select.option><flux:select.option value="Otro">Otro</flux:select.option></flux:select>
+                                    <flux:input label="Número" wire:model="comprobantes_definitivos.{{ $index }}.nro_comprobante" />
+                                    <flux:input type="number" step="0.01" label="Monto" wire:model="comprobantes_definitivos.{{ $index }}.monto" />
+                                    @error("comprobantes_definitivos.{$index}.monto") <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror
+                                </div>
+                                @if ($tramite->items->where('comprar', '>', 0)->isNotEmpty())
+                                    <div class="space-y-2 rounded border border-zinc-200 p-2 dark:border-zinc-700">
+                                        <flux:label>Cantidades compradas en este comprobante</flux:label>
+                                        @foreach ($tramite->items->where('comprar', '>', 0) as $item)
+                                            <div class="grid grid-cols-2 items-center gap-3">
+                                                <flux:text class="text-sm">{{ $item->descripcion }}</flux:text>
+                                                <flux:input type="number" step="0.01" wire:model="comprobantes_definitivos.{{ $index }}.items.{{ $item->id }}" />
+                                                @error("comprobantes_definitivos.{$index}.items.{$item->id}") <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                <div><flux:label>Evidencia</flux:label><input type="file" wire:model="comprobantes_definitivos.{{ $index }}.archivo" accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" /></div>
                             </div>
                         @endforeach
                         @if ($comprobantes_definitivos)<flux:button type="submit" variant="primary">Registrar comprobantes</flux:button>@endif
@@ -1227,11 +1504,37 @@ new class extends Component
                 @if ($tramite->gestionLogistica->estado_pago)
                     <flux:badge color="green">{{ $tramite->gestionLogistica->estado_pago }}</flux:badge>
 
+                    @if ($tramite->despachos->isNotEmpty())
+                        <div class="space-y-1 rounded border border-zinc-200 p-3 text-sm dark:border-zinc-700">
+                            <flux:label>Despachos ya registrados</flux:label>
+                            @foreach ($tramite->despachos->sortByDesc('created_at') as $despachoPrevio)
+                                <div class="flex flex-wrap justify-between gap-2 border-b border-dashed border-zinc-200 py-1 last:border-0 dark:border-zinc-700">
+                                    <span>{{ $despachoPrevio->created_at->format('d/m/Y H:i') }} · {{ $despachoPrevio->medio_envio }}</span>
+                                    <span>{{ $despachoPrevio->detalles->count() }} ítem(s) despachado(s)</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
                     <form wire:submit="enviarAObra" class="mt-3 flex flex-col gap-3">
-                        <flux:heading size="sm">Enviar a obra</flux:heading>
+                        <flux:heading size="sm">{{ $this->itemsPendientesDespacho->isNotEmpty() ? 'Registrar despacho' : 'Enviar a obra' }}</flux:heading>
 
                         @if (session('error'))
                             <flux:callout variant="danger" heading="{{ session('error') }}" />
+                        @endif
+
+                        @if ($this->itemsPendientesDespacho->isNotEmpty())
+                            <div class="space-y-2 rounded border border-zinc-200 p-3 dark:border-zinc-700">
+                                <flux:label>Cantidades a despachar en este envío</flux:label>
+                                @foreach ($this->itemsPendientesDespacho as $rowDespacho)
+                                    <div class="grid gap-3 sm:grid-cols-3">
+                                        <flux:text class="self-center">{{ $rowDespacho['descripcion'] }} <span class="text-zinc-500">(pendiente {{ $rowDespacho['pendiente'] }} de {{ $rowDespacho['comprado'] }} comprado)</span></flux:text>
+                                        <flux:input type="number" step="0.01" label="Cantidad a despachar" wire:model="detalle_despacho.{{ $rowDespacho['id'] }}" />
+                                        @error("detalle_despacho.{$rowDespacho['id']}") <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror
+                                    </div>
+                                @endforeach
+                                @error('detalle_despacho') <flux:text class="text-red-500 text-sm">{{ $message }}</flux:text> @enderror
+                            </div>
                         @endif
 
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1264,7 +1567,7 @@ new class extends Component
                         <div><flux:label>Comprobantes de transporte (opcional)</flux:label><input type="file" wire:model="comprobantes_transporte" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.xml" class="mt-1 block w-full cursor-pointer rounded-lg border border-zinc-200 bg-white py-1.5 ps-1 text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:file:bg-zinc-700 dark:file:text-zinc-200" /></div>
 
                         <div>
-                            <flux:button type="submit" variant="primary">Enviar a obra</flux:button>
+                            <flux:button type="submit" variant="primary">{{ $this->itemsPendientesDespacho->isNotEmpty() ? 'Registrar despacho' : 'Enviar a obra' }}</flux:button>
                         </div>
                     </form>
                 @elseif (auth()->user()->hasRole('Logística'))
@@ -1306,7 +1609,7 @@ new class extends Component
     </flux:card>
     @endif
 
-    @if ($tramite->tipo === 'SP' && in_array($tramite->estado, ['Pendiente asignación de pago', 'Asignada a Tesorería', 'Asignada a Gerencia General', 'Pago parcial', 'Pagada pendiente conformidad GG']))
+    @if ($tramite->tipo === 'SP' && in_array($tramite->estado, ['Pendiente revisión de Administración', 'Asignada a Tesorería', 'Asignada a Gerencia General', 'Pago parcial', 'Pagada pendiente conformidad GG']))
     <flux:card class="mb-4">
         <flux:heading size="lg" class="mb-3">Gestión de Pago</flux:heading>
 
@@ -1314,19 +1617,19 @@ new class extends Component
             <flux:callout variant="danger" class="mb-3" heading="{{ session('error') }}" />
         @endif
 
-        @if ($tramite->estado === 'Pendiente asignación de pago')
-            @if (auth()->user()->hasRole('Gerencia General'))
+        @if ($tramite->estado === 'Pendiente revisión de Administración')
+            @if (auth()->user()->hasRole('Administración'))
                 <form wire:submit="asignarPagoSp" class="flex flex-col gap-3">
                     <flux:select label="¿Quién realizará el pago?" wire:model="asignado_pago">
                         <flux:select.option value="Tesorería">Tesorería</flux:select.option>
                         <flux:select.option value="Gerencia General">Gerencia General</flux:select.option>
                     </flux:select>
                     <div>
-                        <flux:button type="submit" variant="primary">Asignar responsable de pago</flux:button>
+                        <flux:button type="submit" variant="primary">Revisar y asignar responsable de pago</flux:button>
                     </div>
                 </form>
             @else
-                <flux:text class="text-zinc-500">Pendiente de asignación por Gerencia General.</flux:text>
+                <flux:text class="text-zinc-500">Pendiente de revisión y asignación por Administración.</flux:text>
             @endif
         @endif
 
